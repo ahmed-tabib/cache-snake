@@ -2867,6 +2867,7 @@ x-wp-nonce
 x-wp-pjax-prefetch
 X-WR-CDN
 X-WR-GEO-CC
+x-wf-forwarded-proto
 X-WR-Protocol
 x-ws-api-key
 X-Ws-Request-Id

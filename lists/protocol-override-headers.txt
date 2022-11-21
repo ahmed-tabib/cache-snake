@@ -5,6 +5,7 @@ X_FORWARDED_PROTO
 x-forwarded-protocol
 X-Forwarded-Proto-orig
 X-Forwarded-Proto-Override
+x-wf-forwarded-proto
 cloudfront-forwarded-proto
 WSM-X-Forwarded-Proto
 X-Client-Forwarded-Proto

