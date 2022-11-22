@@ -516,6 +516,7 @@ def header_bin_search(url, header_list):
     while (True):
 
         #go over every header group, make a request, check the responses, if ordinary, remove from list.
+        eliminated_indices = []
         for i in range(len(header_group_list)):
             cache_buster = "cache-" + gen_rand_str(8)
             canary = "canary" + gen_rand_str(8)
@@ -532,7 +533,10 @@ def header_bin_search(url, header_list):
             if (response.status_code != initial_response.status_code) or (canary in response.text) or any(canary in value for value in response.headers.values()):
                 pass
             else:
-                header_group_list.pop(i)
+                eliminated_indices.append(i)
+
+        for idx in eliminated_indices:
+            header_group_list.pop(idx)
         
         #now that useless header groups are removed, check if we have any left and split them
         if (len(header_group_list) == 0):
@@ -549,6 +553,7 @@ def header_bin_search(url, header_list):
                     new_header_group_list.append(header_group[:len(header_group)//2])
                     new_header_group_list.append(header_group[len(header_group)//2:])
             header_group_list = new_header_group_list
+
 
 
 logging.basicConfig(level=logging.INFO)
