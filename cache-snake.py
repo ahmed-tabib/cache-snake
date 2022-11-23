@@ -5,6 +5,8 @@ import timeit
 import time
 import logging
 import termcolor
+import itertools
+import concurrent.futures
 
 #
 # Global variables
@@ -37,6 +39,10 @@ def gen_rand_str(length):
     return ''.join(random.choice(string.ascii_lowercase) for i in range(length))
 def gen_rand_int(length):
     return ''.join(random.choice(string.digits) for i in range(length))
+
+#######################################
+### RECON AND INFORMATION GATHERING ###
+#######################################
 
 #
 # Check if specified endpoint is cacheable through hit/miss, age header and timing.
@@ -500,11 +506,20 @@ def attack_host_override(url):
     
     return (is_vulnerable, exploitable_headers)
 
+#
+# Send illegal header, causes DoS
+#
+def attack_illegal_header(url):
+    return 0
 
 ############################
 ### HEADER BRUTE-FORCING ###
 ############################
 
+#
+# This function recieves a short list of headers and determines which ones cause a response change
+# through a binary search-like algorithm
+#
 def header_bin_search(url, header_list):
     #fetch a normal response to compare following responses to it.
     initial_response = httpx.request("GET", url, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
@@ -514,9 +529,9 @@ def header_bin_search(url, header_list):
     header_group_list = [header_list]
     
     while (True):
-
         #go over every header group, make a request, check the responses, if ordinary, remove from list.
         eliminated_indices = []
+
         for i in range(len(header_group_list)):
             cache_buster = "cache-" + gen_rand_str(8)
             canary = "canary" + gen_rand_str(8)
@@ -554,7 +569,35 @@ def header_bin_search(url, header_list):
                     new_header_group_list.append(header_group[len(header_group)//2:])
             header_group_list = new_header_group_list
 
+#
+# Helper function that runs header_bin_search iteratively over a list of header lists
+#
+def header_bin_search_helper(url, header_group_list):
+    retval = []
+    for header_group in header_group_list:
+        retval = retval + header_bin_search(url, header_group)
+    return retval
 
+#
+# This function divides the large header list into manageable chunks and 
+# uses multithreading to test all of them on a target
+#
+def header_bruteforce(url, header_count=15, thread_count=5):
+    #fetching headers and splitting them into header_count long chunks, and then again into thread_count chuncks
+    headers = open("lists/headers.txt", "r").read().splitlines()
+    header_group_list = [headers[i:i + header_count] for i in range(0, len(headers), header_count)]
+    header_group_list_list = [header_group_list[i:i + thread_count] for i in range(0, len(header_group_list), thread_count)]
+
+    #execute concurrently
+    executor = concurrent.futures.ThreadPoolExecutor()
+    executor_results = executor.map(header_bin_search_helper, itertools.repeat(url), header_group_list_list)
+    retval = []
+    for header_list in  list(executor_results):
+        retval = retval + header_list
+    return retval
 
 logging.basicConfig(level=logging.INFO)
 print_banner()
+
+#test
+#print(header_bruteforce("https://ipaidthat.io/fr/"))

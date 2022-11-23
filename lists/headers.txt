@@ -1,5 +1,3 @@
-\
-]
 aacomtr_Gzip
 aacomtr_Gzip_g
 AA-Gzip
@@ -294,7 +292,6 @@ Content-Dpr
 content-encoding
 Content-ID
 content-language
-Content-Length
 content-location
 content-md5
 content-range
