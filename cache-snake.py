@@ -628,7 +628,7 @@ def header_bruteforce(url, header_count=15, thread_count=5):
     executor = concurrent.futures.ThreadPoolExecutor()
     executor_results = executor.map(header_bin_search_helper, itertools.repeat(url), header_group_list_list)
     retval = []
-    for header_list in  list(executor_results):
+    for header_list in list(executor_results):
         retval = retval + header_list
     return retval
 
@@ -649,9 +649,9 @@ def header_bruteforce(url, header_count=15, thread_count=5):
 #   - does it cause response code change? see cacheability 
 #
 # For every header this function returns a tuple in the following form:
-# ( is_response_cacheable, is_status_code_changed, new_status_code, is_body_reflected, is_body_unfiltered, is_header_reflected, reflection_header_names, score )
+# ( is_response_cacheable, is_status_code_changed, new_status_code, is_body_reflected, is_body_unfiltered, is_header_reflected, reflection_header_names )
 #
-def assess_severity(url, header):
+def assess_header_severity(url, header):
     is_response_cacheable = False
     is_status_code_changed = False
     new_status_code = 0
@@ -659,7 +659,6 @@ def assess_severity(url, header):
     is_body_unfiltered = False
     is_header_reflected = False
     reflection_header_names = []
-    score = 0
 
     cache_buster = "cache" + gen_rand_str(8)
 
@@ -715,13 +714,45 @@ def assess_severity(url, header):
     #determine score
     #TODO
 
-    return (is_response_cacheable, is_status_code_changed, new_status_code, is_body_reflected, is_body_unfiltered, is_header_reflected, reflection_header_names, score)
-                                            
+    return (is_response_cacheable, is_status_code_changed, new_status_code, is_body_reflected, is_body_unfiltered, is_header_reflected, reflection_header_names)
     
+#
+# execute assess_header_severity concurrently and with console output
+#
+def assess_severity(url, headers, thread_count = 5):
+    #splitting headers into thread_count long chunks
+    header_group_list = [headers[i:i + thread_count] for i in range(0, len(headers), thread_count)]
+
+    header_assessments = []
+    #execute concurrently
+    for header_group in header_group_list:
+        executor = concurrent.futures.ThreadPoolExecutor()
+        executor_results = executor.map(assess_header_severity, itertools.repeat(url), header_group)
+        header_assessments = header_assessments + list(executor_results)
+
+    #print the results to the console
+    for i in range(len(header_assessments)):
+        msg = "[!] Header Report: \"{0}\" On \"{1}\"\n> ".format(headers[i], url)
+        msg_color = "red"
+        if header_assessments[i][0]:
+            msg += "Cacheable Response. "
+            msg_color = "green"
+        if header_assessments[i][1]:
+            msg += "HTTP Status Code Modified To {0}. ".format(header_assessments[i][2])
+        if header_assessments[i][3]:
+            msg += "Reflected "
+            if header_assessments[i][4]:
+                msg += "Unfiltered "
+            msg += "Value in Response Body. "
+        if header_assessments[i][5]:
+            msg += "Reflected Value in Response Headers {0}.".format(header_assessments[i][6])
+
+        logging.critical(termcolor.colored(msg, msg_color))
+
+    return header_assessments
 
 logging.basicConfig(level=logging.INFO)
 print_banner()
 
 #test
-#for header in header_bruteforce("https://0ac500b50350b19ec0dd74ae00cf0089.web-security-academy.net/"):
-#    print(header+":", assess_severity("https://0ac500b50350b19ec0dd74ae00cf0089.web-security-academy.net/", header))
+assess_severity("https://ipaidthat.io/fr/", header_bruteforce("https://ipaidthat.io/fr/"))
