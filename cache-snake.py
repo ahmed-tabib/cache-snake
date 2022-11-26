@@ -273,7 +273,7 @@ def attack_path_override(url):
 
     for header in headers:
         #generate a cache buster and send the request with the header
-        cache_buster = "cache-" + gen_rand_str(8)
+        cache_buster = "cache" + gen_rand_str(8)
         response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com",
@@ -309,7 +309,7 @@ def attack_protocol_override(url):
 
     for header in headers:
         #generate a cache buster and send the request with the header
-        cache_buster = "cache-" + gen_rand_str(8)
+        cache_buster = "cache" + gen_rand_str(8)
         response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com",
@@ -345,7 +345,7 @@ def attack_port_override(url):
 
     for header in headers:
         #generate a cache buster and send the request with the header
-        cache_buster = "cache-" + gen_rand_str(8)
+        cache_buster = "cache" + gen_rand_str(8)
         response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com",
@@ -380,7 +380,7 @@ def attack_method_override(url):
 
     for header in headers:
         #generate a cache buster and send the request with the header
-        cache_buster = "cache-" + gen_rand_str(8)
+        cache_buster = "cache" + gen_rand_str(8)
         response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com",
@@ -406,7 +406,7 @@ def attack_permenant_redirect(url, redirect_causing_header="X-placeholder", redi
     is_vulnerable = False
 
     #if the page does not return a 30X redirect there's nothing to do
-    cache_buster = "cache-" + gen_rand_str(8)
+    cache_buster = "cache" + gen_rand_str(8)
     response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                         "accept":"*/*, text/" + cache_buster,
                                                                                         "origin":"https://" + cache_buster + ".example.com",
@@ -419,7 +419,7 @@ def attack_permenant_redirect(url, redirect_causing_header="X-placeholder", redi
 
     for header in headers:
         #generate a cache buster and send the request with the header
-        cache_buster = "cache-" + gen_rand_str(8)
+        cache_buster = "cache" + gen_rand_str(8)
         response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com",
@@ -455,7 +455,7 @@ def attack_evil_user_agent(url):
 
     for value in values:
         #generate a cache buster and send the request with the header
-        cache_buster = "cache-" + gen_rand_str(8)
+        cache_buster = "cache" + gen_rand_str(8)
         response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":value,
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com"})
@@ -489,7 +489,7 @@ def attack_host_override(url):
 
     for header in headers:
         #generate a cache buster and send the request with the header
-        cache_buster = "cache-" + gen_rand_str(8)
+        cache_buster = "cache" + gen_rand_str(8)
         response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com",
@@ -524,7 +524,7 @@ def attack_port_dos(url):
 
     for header in headers:
         #generate a cache buster and send the request with the header
-        cache_buster = "cache-" + gen_rand_str(8)
+        cache_buster = "cache" + gen_rand_str(8)
         response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com",
@@ -545,7 +545,8 @@ def attack_port_dos(url):
 # Send illegal header, causes DoS
 #
 def attack_illegal_header(url):
-    return 0
+    #TODO implement illegal header attack
+    return []
 
 ############################
 ### HEADER BRUTE-FORCING ###
@@ -568,7 +569,7 @@ def header_bin_search(url, header_list):
         eliminated_indices = []
 
         for i in range(len(header_group_list)):
-            cache_buster = "cache-" + gen_rand_str(8)
+            cache_buster = "cache" + gen_rand_str(8)
             canary = "canary" + gen_rand_str(8)
 
             base_headers = {"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
@@ -648,11 +649,79 @@ def header_bruteforce(url, header_count=15, thread_count=5):
 #   - does it cause response code change? see cacheability 
 #
 # For every header this function returns a tuple in the following form:
-# ( is_response_cacheable, is_status_code_changed, new_status_code, is_body_reflected, is_body_unfiltered, is_header_reflected, is_header_injectable, score )
+# ( is_response_cacheable, is_status_code_changed, new_status_code, is_body_reflected, is_body_unfiltered, is_header_reflected, reflection_header_names, score )
 #
+def assess_severity(url, header):
+    is_response_cacheable = False
+    is_status_code_changed = False
+    new_status_code = 0
+    is_body_reflected = False
+    is_body_unfiltered = False
+    is_header_reflected = False
+    reflection_header_names = []
+    score = 0
+
+    cache_buster = "cache" + gen_rand_str(8)
+
+    initial_response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                                                                                                 "accept":"*/*, text/" + cache_buster,
+                                                                                                 "origin":"https://" + cache_buster + ".example.com"})
+    cache_buster = "cache" + gen_rand_str(8)
+    canary = "canary" + gen_rand_str(8)
+    poisoned_response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                                                                                            "accept":"*/*, text/" + cache_buster,
+                                                                                            "origin":"https://" + cache_buster + ".example.com",
+                                                                                            header:canary})
+
+    #check for status code change
+    if poisoned_response.status_code != initial_response.status_code:
+        is_status_code_changed = True
+        new_status_code = poisoned_response.status_code
+    
+    #check for response header reflection
+    for header_value_pair in poisoned_response.headers.items():
+        if canary in header_value_pair[1]:
+            is_header_reflected = True
+            reflection_header_names.append(header_value_pair[0])
+
+    #check for response body reflection
+    if canary in poisoned_response.text:
+        is_body_reflected = True
+
+    #check for cacheability
+    poisoned_response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                                                                                                  "accept":"*/*, text/" + cache_buster,
+                                                                                                  "origin":"https://" + cache_buster + ".example.com"})
+    if is_status_code_changed and poisoned_response.status_code == new_status_code:
+        is_response_cacheable = True
+    
+    if is_header_reflected and any([(canary in header_value) for header_value in poisoned_response.headers.values()]):
+        is_response_cacheable = True
+    
+    if is_body_reflected and canary in poisoned_response.text:
+        is_response_cacheable = True
+
+    #check for filtering in the body, kind of dumb considering alot of situations wouldn't be detected by this
+    if is_body_reflected:
+        cache_buster = "cache" + gen_rand_str(8)
+        canary = "canary" + gen_rand_str(8) + "\"<>"
+        poisoned_response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                                                                                                      "accept":"*/*, text/" + cache_buster,
+                                                                                                      "origin":"https://" + cache_buster + ".example.com",
+                                                                                                      header:canary})
+        if canary in poisoned_response.text:
+            is_body_unfiltered = True
+
+    #determine score
+    #TODO
+
+    return (is_response_cacheable, is_status_code_changed, new_status_code, is_body_reflected, is_body_unfiltered, is_header_reflected, reflection_header_names, score)
+                                            
+    
 
 logging.basicConfig(level=logging.INFO)
 print_banner()
 
 #test
-#print(header_bruteforce("https://ipaidthat.io/fr/"))
+#for header in header_bruteforce("https://0ac500b50350b19ec0dd74ae00cf0089.web-security-academy.net/"):
+#    print(header+":", assess_severity("https://0ac500b50350b19ec0dd74ae00cf0089.web-security-academy.net/", header))
