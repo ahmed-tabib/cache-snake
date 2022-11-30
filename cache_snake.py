@@ -817,9 +817,9 @@ def assess_severity(url, headers, thread_count = 5):
 
     return header_assessments
 
-logging.basicConfig(level=logging.INFO, format='%(message)s')
-print_banner()
+#logging.basicConfig(level=logging.INFO, format='%(message)s')
+#print_banner()
 
 #test
-specific_attacks("https://0a620006030cd19dc043437200760025.web-security-academy.net/")
+#specific_attacks("https://0a620006030cd19dc043437200760025.web-security-academy.net/")
 #assess_severity("https://assets.finn.no/pkg/frontpage-podium/2.0.70/scripts.js", header_bruteforce("https://assets.finn.no/pkg/frontpage-podium/2.0.70/scripts.js"))
