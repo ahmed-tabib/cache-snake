@@ -1,8 +1,9 @@
 import cache_snake
+import os
+import re
+import time
 import json
 import httpx
-import time
-import os
 import zipfile
 
 #fetch bug bounty/vulnerability disclosure programs from projectdiscovery chaos
@@ -72,4 +73,53 @@ def get_chaos_subdomains(program_name):
 
     return subdomain_list
 
-print(get_chaos_subdomains("84codes"))
+#get urls for testing 
+def get_urls_from_subdomains(subdomain_list, response_timeout=5.0):
+    url_list = []
+    seen_subdomains = [] # we don't need more than one javascript url from any subdomain so we keep track of urls from subdomains we've alredy seen
+    
+    for subdomain in subdomain_list:
+        #get response from server
+        for url_prefix in ["http://", "https://"]:
+            if url_prefix + str(subdomain) in url_list:
+                continue
+
+            try:
+                response = httpx.get(url_prefix + str(subdomain), follow_redirects=True, timeout=response_timeout)
+            except:
+                continue
+
+            if response.is_success:
+                #add all previous redirects and current url to list
+                for redirect_response in response.history:
+                    url_list.append(str(redirect_response.url))
+                url_list.append(str(response.url))
+
+                #iterate over every script tag, get url, test response, make sure it doesn't already exist and add it to the list
+                script_tags = re.findall("<script[^\\>]*src=[\"']?[^'\" ]*[\"']?", response.text)
+                for js_url in script_tags:
+                    #extract src value from html, if we have a relative url make it absolute
+                    js_url = js_url.split("src=")[1]
+                    js_url = js_url[1:len(js_url) - 1]
+                    if js_url.startswith("/"):
+                        js_url = str(response.url) + js_url
+                    
+                    if js_url in url_list:
+                        continue
+
+                    #use httpx.URL object to parse url
+                    url_obj = httpx.URL(js_url)
+                    if url_obj.host in subdomain_list and url_obj.host not in seen_subdomains:
+                        #try to get a response from server
+                        try:
+                            js_response = httpx.get(url_obj, timeout=response_timeout)
+                        except:
+                            continue
+                        
+                        #if we get successful response add the javascript url to the list and mark the subdomain so we don't get many duplicates
+                        if js_response.is_success:
+                            url_list.append(js_url)
+                            seen_subdomains.append(url_obj.host)
+    return url_list
+
+print(get_urls_from_subdomains(["www.youtube.com"]))
