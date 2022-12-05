@@ -186,7 +186,6 @@ def main():
 
     #for program in bounty_program_names:
     #    test_chaos_program(program)
-    test_chaos_program('aax')
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         executor.map(test_chaos_program, bounty_program_names)
 
