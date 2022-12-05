@@ -74,7 +74,7 @@ def get_chaos_subdomains(program_name):
     return subdomain_list
 
 #get urls for testing 
-def get_urls_from_subdomains(subdomain_list, response_timeout=5.0):
+def get_urls_from_subdomains(subdomain_list, response_timeout=10.0):
     url_list = []
     seen_subdomains = [] # we don't need more than one javascript url from any subdomain so we keep track of urls from subdomains we've alredy seen
     
@@ -85,7 +85,7 @@ def get_urls_from_subdomains(subdomain_list, response_timeout=5.0):
                 continue
 
             try:
-                response = httpx.get(url_prefix + str(subdomain), follow_redirects=True, timeout=response_timeout)
+                response = httpx.get(url_prefix + str(subdomain, 'ascii'), follow_redirects=True, timeout=response_timeout)
             except:
                 continue
 
@@ -101,15 +101,20 @@ def get_urls_from_subdomains(subdomain_list, response_timeout=5.0):
                     #extract src value from html, if we have a relative url make it absolute
                     js_url = js_url.split("src=")[1]
                     js_url = js_url[1:len(js_url) - 1]
-                    if js_url.startswith("/"):
-                        js_url = str(response.url) + js_url
+                    if js_url.startswith("//"):
+                        js_url = "https:" + js_url
+                    elif js_url.startswith("/"):
+                        if str(response.url).endswith("/"):
+                            js_url = str(response.url) + js_url[1:len(js_url)]
+                        else:
+                            js_url = str(response.url) + js_url
                     
                     if js_url in url_list:
                         continue
 
                     #use httpx.URL object to parse url
                     url_obj = httpx.URL(js_url)
-                    if url_obj.host in subdomain_list and url_obj.host not in seen_subdomains:
+                    if bytes(url_obj.host, 'ascii') in subdomain_list and url_obj.host not in seen_subdomains:
                         #try to get a response from server
                         try:
                             js_response = httpx.get(url_obj, timeout=response_timeout)
@@ -122,4 +127,4 @@ def get_urls_from_subdomains(subdomain_list, response_timeout=5.0):
                             seen_subdomains.append(url_obj.host)
     return url_list
 
-#print(get_chaos_subdomains("8x8"))
+print(get_urls_from_subdomains(get_chaos_subdomains("4chan")))
