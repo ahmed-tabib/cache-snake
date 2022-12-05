@@ -5,6 +5,9 @@ import time
 import json
 import httpx
 import zipfile
+import logging
+import termcolor
+import concurrent.futures
 
 #fetch bug bounty/vulnerability disclosure programs from projectdiscovery chaos
 def get_chaos_list(force_fetch=False):
@@ -92,8 +95,10 @@ def get_urls_from_subdomains(subdomain_list, response_timeout=10.0):
             if response.is_success:
                 #add all previous redirects and current url to list
                 for redirect_response in response.history:
-                    url_list.append(str(redirect_response.url))
-                url_list.append(str(response.url))
+                    if bytes(redirect_response.url.host, 'ascii') in subdomain_list:
+                        url_list.append(str(redirect_response.url))
+                if bytes(response.url.host, 'ascii') in subdomain_list:
+                    url_list.append(str(response.url))
 
                 #iterate over every script tag, get url, test response, make sure it doesn't already exist and add it to the list
                 script_tags = re.findall("<script[^\\>]*src=[\"']?[^'\" ]*[\"']?", response.text)
@@ -127,4 +132,64 @@ def get_urls_from_subdomains(subdomain_list, response_timeout=10.0):
                             seen_subdomains.append(url_obj.host)
     return url_list
 
-print(get_urls_from_subdomains(get_chaos_subdomains("4chan")))
+#get a program name, and test it for cache poisoning
+def test_chaos_program(program_name):
+    logging.info(termcolor.colored("[i]: Testing Program: {}".format(program_name), "blue"))
+
+    #get available subdomains
+    subdomain_list = get_chaos_subdomains(program_name)
+    if len(subdomain_list) == 0:
+        logging.info(termcolor.colored("[i]: Subdomain list for program \"{}\" is empty.".format(program_name), "blue"))
+        return
+    logging.info(termcolor.colored("[i]: Found {1} subdomains for {0}.".format(program_name, len(subdomain_list)), "blue"))
+
+    
+    #get useful urls
+    url_list = get_urls_from_subdomains(subdomain_list)
+    if len(url_list) == 0:
+        logging.info(termcolor.colored("[i]: No URL's found for program \"{}\".".format(program_name), "blue"))
+        return
+    logging.info(termcolor.colored("[i]: Found {1} URL's for {0}.".format(program_name, len(url_list)), "blue"))
+
+    #
+    # attacks are launched sequentially rather than concurrently out of fear
+    # that we will get ip banned because these attacks are rather noisy
+    # it's better to have concurrency between programs being tested rather
+    # than within them.
+    #
+
+    #try specific attacks first
+    for url in url_list:
+        cache_snake.specific_attacks(url)
+    
+    #try header bruteforce
+    for url in url_list:
+        header_bruteforce_result = cache_snake.header_bruteforce(url)
+        cache_snake.assess_severity(url, header_bruteforce_result)
+
+    logging.info(termcolor.colored("[i]: DONE Testing Program: {}".format(program_name), "blue"))
+
+
+
+#main function
+def main():
+    logging.basicConfig(level=logging.INFO, format='%(message)s')
+    
+    cache_snake.print_banner()
+
+    logging.info(termcolor.colored("[i]: CHAOS TESTING INITIATED", "blue"))
+
+    chaos_list = get_chaos_list()
+    bounty_program_names = [program["name"] for program in chaos_list["programs"] if program["bounty"]]
+
+    logging.info(termcolor.colored("[i]: Found {} bug bounty programs.".format(len(bounty_program_names)), "blue"))
+
+    #for program in bounty_program_names:
+    #    test_chaos_program(program)
+    test_chaos_program('aax')
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        executor.map(test_chaos_program, bounty_program_names)
+
+
+if __name__ == "__main__":
+    main()

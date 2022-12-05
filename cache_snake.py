@@ -375,10 +375,10 @@ def attack_method_override(url):
     is_vulnerable = False
     
     #if the page does not return a 200 ok there's nothing to do
-    response = httpx.request("GET", url, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+    initial_response = httpx.request("GET", url, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                   "accept":"*/*, text/stuff",
                                                   "origin":"https://www.example.com"})
-    if response.status_code != 200:
+    if initial_response.status_code != 200:
         return (is_vulnerable, exploitable_headers)
     
     headers = open("lists/method-override-headers.txt", "r").read().splitlines()
@@ -391,12 +391,12 @@ def attack_method_override(url):
                                                                                             "origin":"https://" + cache_buster + ".example.com",
                                                                                             header:"HEAD"})
         #if we get an empty response, we remove the header and resend the request
-        if len(response.text) <= 2:
+        if len(response.text) <= 2 and len(response.text) < len(initial_response.text):
             time.sleep(1)
             response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com"})
-            if len(response.text) <= 2:
+            if len(response.text) <= 2 and len(response.text) < len(initial_response.text):
                 exploitable_headers.append(header)
                 is_vulnerable = True
     
@@ -587,12 +587,12 @@ def attack_illegal_header(url):
                                                                                         "origin":"https://" + cache_buster + ".example.com",
                                                                                         "]":"x"})
     #if we get a non 200 response code, we remove the header and resend the request
-    if response.status_code != 200:
+    if response.status_code not in [200, 301, 302, 303, 307, 308]:
         time.sleep(1)
         response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                         "accept":"*/*, text/" + cache_buster,
                                                                                         "origin":"https://" + cache_buster + ".example.com"})
-        if response.status_code != 200:
+        if response.status_code not in [200, 301, 302, 303, 307, 308]:
             is_vulnerable = True
     
 
@@ -661,7 +661,7 @@ def specific_attacks(url):
     attack_result = attack_illegal_header(url)
     if attack_result[0]:
         logging.critical(termcolor.colored("[!]: ATTACK REPORT: \"{}\"".format(url), "green"))
-        logging.critical(termcolor.colored("[!]: [DOS ATTACK]: illegal header attack through: {}".format(attack_result[1]), "green"))
+        logging.critical(termcolor.colored("[!]: [DOS ATTACK]: illegal header attack through: \"{}\"".format(attack_result[1]), "green"))
 
 ############################
 ### HEADER BRUTE-FORCING ###
@@ -673,9 +673,12 @@ def specific_attacks(url):
 #
 def header_bin_search(url, header_list):
     #fetch a normal response to compare following responses to it.
-    initial_response = httpx.request("GET", url, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
-                                                          "accept":"*/*, text/stuff",
-                                                          "origin":"https://www.example.com"})
+    try:
+        initial_response = httpx.request("GET", url, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                                                              "accept":"*/*, text/stuff",
+                                                              "origin":"https://www.example.com"})
+    except:
+        return []
   
     header_group_list = [header_list]
     
@@ -695,7 +698,12 @@ def header_bin_search(url, header_list):
             for header in header_group_list[i]:
                 request_headers[header] = canary
             
-            response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers=request_headers)
+            try:
+                response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers=request_headers)
+            except:
+                eliminated_indices.append(i)
+                continue
+            
             if (response.status_code != initial_response.status_code) or (canary in response.text) or any(canary in value for value in response.headers.values()):
                 pass
             else:
@@ -746,6 +754,7 @@ def header_bruteforce(url, header_count=15, thread_count=5):
     retval = []
     for header_list in list(executor_results):
         retval = retval + header_list
+    executor.shutdown()
     return retval
 
 
@@ -827,9 +836,6 @@ def assess_header_severity(url, header):
         if canary in poisoned_response.text:
             is_body_unfiltered = True
 
-    #determine score
-    #TODO
-
     return (is_response_cacheable, is_status_code_changed, new_status_code, is_body_reflected, is_body_unfiltered, is_header_reflected, reflection_header_names)
     
 #
@@ -845,6 +851,7 @@ def assess_severity(url, headers, thread_count = 5):
         executor = concurrent.futures.ThreadPoolExecutor()
         executor_results = executor.map(assess_header_severity, itertools.repeat(url), header_group)
         header_assessments = header_assessments + list(executor_results)
+        executor.shutdown()
 
     #print the results to the console
     for i in range(len(header_assessments)):
