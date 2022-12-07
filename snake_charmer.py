@@ -173,7 +173,7 @@ def test_chaos_program(program_name):
 
 #main function
 def main():
-    logging.basicConfig(level=logging.WARN, format='%(message)s')
+    logging.basicConfig(level=logging.INFO, format='%(message)s')
     
     cache_snake.print_banner()
 
@@ -186,7 +186,7 @@ def main():
 
     #for program in bounty_program_names:
     #   test_chaos_program('avalanche')
-    with concurrent.futures.ThreadPoolExecutor(max_workers=40) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
         executor.map(test_chaos_program, bounty_program_names)
 
 
