@@ -160,12 +160,12 @@ def test_chaos_program(program_name):
 
     #try specific attacks first
     for url in url_list:
-        cache_snake.specific_attacks(url)
+        cache_snake.specific_attacks(url, program_name)
     
     #try header bruteforce
     for url in url_list:
         header_bruteforce_result = cache_snake.header_bruteforce(url)
-        cache_snake.assess_severity(url, header_bruteforce_result)
+        cache_snake.assess_severity(url, program_name, header_bruteforce_result)
 
     logging.info(termcolor.colored("[i]: DONE Testing Program: {}".format(program_name), "blue"))
 
@@ -173,7 +173,7 @@ def test_chaos_program(program_name):
 
 #main function
 def main():
-    logging.basicConfig(level=logging.INFO, format='%(message)s')
+    logging.basicConfig(level=logging.WARN, format='%(message)s')
     
     cache_snake.print_banner()
 
@@ -185,7 +185,7 @@ def main():
     logging.info(termcolor.colored("[i]: Found {} bug bounty programs.".format(len(bounty_program_names)), "blue"))
 
     #for program in bounty_program_names:
-    #    test_chaos_program(program)
+    #   test_chaos_program('avalanche')
     with concurrent.futures.ThreadPoolExecutor(max_workers=40) as executor:
         executor.map(test_chaos_program, bounty_program_names)
 
