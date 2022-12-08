@@ -281,7 +281,7 @@ def attack_path_override(url, initial_response=None):
         response = initial_response
 
     if response.status_code != 200:
-        return (is_vulnerable, exploitable_headers,)
+        return (is_vulnerable, exploitable_headers, is_possible, is_probable)
     
     headers = open("lists/path-override-headers.txt", "r").read().splitlines()
 
@@ -308,7 +308,7 @@ def attack_path_override(url, initial_response=None):
             if response.status_code != 200:
                 is_vulnerable = True
     
-    return (is_vulnerable, exploitable_headers,is_possible, is_probable)
+    return (is_vulnerable, exploitable_headers, is_possible, is_probable)
 
 #
 # tries to make it look like the request is done through http when in fact it's done through https, causing the server to 
@@ -645,7 +645,7 @@ def attack_illegal_header(url, initial_response=None):
 class specific_attack_result:
     program_name = ""
     url = ""
-    dos_path_override = (False, [], False)
+    dos_path_override = (False, [], False, False)
     dos_proto_override = (False, [])
     rdr_permenant_redirect = (False, [])
     dos_port_override = (False, [])
@@ -685,7 +685,7 @@ def specific_attacks(url, program_name):
             logging.critical(termcolor.colored("[!]: [LIKELY DOS ATTACK]: path override with uncacheable 404 page through: {}".format(attack_result[1]), "green"))
         elif attack_result[3]:
             logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
-            logging.critical(termcolor.colored("[!]: [POSSIBLE DOS ATTACK]: path override with uncacheable error page through: {}".format(attack_result[1]), "green"))
+            logging.critical(termcolor.colored("[!]: [POSSIBLE DOS ATTACK]: path override with uncacheable error page through: {}".format(attack_result[1]), "yellow"))
     except:
         pass
     

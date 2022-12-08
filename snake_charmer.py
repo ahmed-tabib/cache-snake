@@ -7,6 +7,8 @@ import httpx
 import zipfile
 import logging
 import termcolor
+import itertools
+import threading
 import concurrent.futures
 
 #fetch bug bounty/vulnerability disclosure programs from projectdiscovery chaos
@@ -133,23 +135,23 @@ def get_urls_from_subdomains(subdomain_list, response_timeout=10.0):
     return url_list
 
 #get a program name, and test it for cache poisoning
-def test_chaos_program(program_name):
-    logging.info(termcolor.colored("[i]: Testing Program: {}".format(program_name), "blue"))
+def test_chaos_program(program, vuln_file_path="", vuln_file_lock=None):
+    logging.info(termcolor.colored("[i]: Testing Program: {}".format(program["name"]), "blue"))
 
     #get available subdomains
-    subdomain_list = get_chaos_subdomains(program_name)
+    subdomain_list = get_chaos_subdomains(program["name"])
     if len(subdomain_list) == 0:
-        logging.info(termcolor.colored("[i]: Subdomain list for program \"{}\" is empty.".format(program_name), "blue"))
+        logging.info(termcolor.colored("[i]: Subdomain list for program \"{}\" is empty.".format(program["name"]), "blue"))
         return
-    logging.info(termcolor.colored("[i]: Found {1} subdomains for {0}.".format(program_name, len(subdomain_list)), "blue"))
+    logging.info(termcolor.colored("[i]: Found {1} subdomains for {0}.".format(program["name"], len(subdomain_list)), "blue"))
 
     
     #get useful urls
     url_list = get_urls_from_subdomains(subdomain_list)
     if len(url_list) == 0:
-        logging.info(termcolor.colored("[i]: No URL's found for program \"{}\".".format(program_name), "blue"))
+        logging.info(termcolor.colored("[i]: No URL's found for program \"{}\".".format(program["name"]), "blue"))
         return
-    logging.info(termcolor.colored("[i]: Found {1} URL's for {0}.".format(program_name, len(url_list)), "blue"))
+    logging.info(termcolor.colored("[i]: Found {1} URL's for {0}.".format(program["name"], len(url_list)), "blue"))
 
     #
     # attacks are launched sequentially rather than concurrently out of fear
@@ -158,16 +160,66 @@ def test_chaos_program(program_name):
     # than within them.
     #
 
-    #try specific attacks first
-    for url in url_list:
-        cache_snake.specific_attacks(url, program_name)
+    vulns = []
     
-    #try header bruteforce
     for url in url_list:
+        specific_attacks_result = cache_snake.specific_attacks(url, program["name"])
         header_bruteforce_result = cache_snake.header_bruteforce(url)
-        cache_snake.assess_severity(url, program_name, header_bruteforce_result)
+        severity_asessment_result = cache_snake.assess_severity(url, program["name"], header_bruteforce_result)
 
-    logging.info(termcolor.colored("[i]: DONE Testing Program: {}".format(program_name), "blue"))
+        specific_attacks_json = []
+        if specific_attacks_result.dos_path_override[0]:
+            specific_attacks_json.append({"attack_name": "Path Override DoS", "headers": specific_attacks_result.dos_path_override[1]})
+        if specific_attacks_result.dos_path_override[2]:
+            specific_attacks_json.append({"attack_name": "Likely Path Override DoS", "headers": specific_attacks_result.dos_path_override[1]})
+        if specific_attacks_result.dos_path_override[0]:
+            specific_attacks_json.append({"attack_name": "Possible Path Override DoS", "headers": specific_attacks_result.dos_path_override[1]})
+        if specific_attacks_result.dos_proto_override[0]:
+            specific_attacks_json.append({"attack_name": "Protocol Override DoS", "headers": specific_attacks_result.dos_proto_override[1]})
+        if specific_attacks_result.rdr_permenant_redirect[0]:
+            specific_attacks_json.append({"attack_name": "Permenant Redirect", "headers": specific_attacks_result.rdr_permenant_redirect[1]})
+        if specific_attacks_result.dos_port_override[0]:
+            specific_attacks_json.append({"attack_name": "Port Override DoS", "headers": specific_attacks_result.dos_port_override[1]})
+        if specific_attacks_result.dos_method_override[0]:
+            specific_attacks_json.append({"attack_name": "Method Override DoS", "headers": specific_attacks_result.dos_method_override[1]})
+        if specific_attacks_result.dos_evil_user_agent[0]:
+            specific_attacks_json.append({"attack_name": "Method Override DoS", "headers": specific_attacks_result.dos_evil_user_agent[1]})
+        if specific_attacks_result.xss_host_override[0]:
+            specific_attacks_json.append({"attack_name": "Host Override XSS", "headers": specific_attacks_result.xss_host_override[1]})
+        if specific_attacks_result.dos_host_header_port[0]:
+            specific_attacks_json.append({"attack_name": "Host Header Port DoS", "headers": specific_attacks_result.dos_host_header_port[1]})
+        if specific_attacks_result.dos_illegal_header[0]:
+            specific_attacks_json.append({"attack_name": "Illegal Header DoS", "headers": specific_attacks_result.dos_illegal_header[1]})
+            
+        header_bruteforce_json = []
+        for i in range(len(header_bruteforce_result)):
+            if severity_asessment_result[i][0] and (severity_asessment_result[i][1] or severity_asessment_result[i][3] or severity_asessment_result[i][5]):
+                header_bruteforce_json.append({"header_name": header_bruteforce_result[i],
+                                               "is_cacheable": severity_asessment_result[i][0],
+                                               "is_status_code_changed": severity_asessment_result[i][1],
+                                               "new_status_code": severity_asessment_result[i][2],
+                                               "is_body_reflected": severity_asessment_result[i][3],
+                                               "is_body_unfiltered": severity_asessment_result[i][4],
+                                               "is_header_reflected": severity_asessment_result[i][5],
+                                               "reflection_header_names": severity_asessment_result[i][6]})
+
+        if len(specific_attacks_json) > 0 or len(header_bruteforce_json) > 0:
+            url_vuln = {"url": url,
+                        "specific_attacks": specific_attacks_json,
+                        "header_bruteforce": header_bruteforce_json,
+                        "discovered_at": int(time.time())}
+        
+            vulns.append(url_vuln)
+    
+    vuln_report = {"program_name": program["name"],
+                   "program_url" : program["url"],
+                   "vulns"       : vulns}
+
+    with vuln_file_lock:
+        with open(vuln_file_path, 'a') as f:
+            f.write(json.dump(vuln_report, indent=4))
+
+    logging.info(termcolor.colored("[i]: DONE Testing Program: {}".format(program["name"]), "blue"))
 
 
 
@@ -180,14 +232,14 @@ def main():
     logging.info(termcolor.colored("[i]: CHAOS TESTING INITIATED", "blue"))
 
     chaos_list = get_chaos_list()
-    bounty_program_names = [program["name"] for program in chaos_list["programs"] if program["bounty"]]
+    bounty_programs = [program for program in chaos_list["programs"] if program["bounty"]]
 
-    logging.info(termcolor.colored("[i]: Found {} bug bounty programs.".format(len(bounty_program_names)), "blue"))
+    logging.info(termcolor.colored("[i]: Found {} bug bounty programs.".format(len(bounty_programs)), "blue"))
 
     #for program in bounty_program_names:
-    #   test_chaos_program('avalanche')
+    vuln_file_lock = threading.Lock()
     with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
-        executor.map(test_chaos_program, bounty_program_names)
+        executor.map(test_chaos_program, bounty_programs, itertools.repeat("vuln_file.txt"), itertools.repeat(vuln_file_lock))
 
 
 if __name__ == "__main__":
