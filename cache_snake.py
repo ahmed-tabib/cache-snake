@@ -344,7 +344,7 @@ def attack_protocol_override(url, initial_response=None):
             response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com"})
-            if response.status_code.is_redirect:
+            if response.is_redirect:
                 exploitable_headers.append(header)
                 is_vulnerable = True
     
@@ -686,7 +686,8 @@ def specific_attacks(url, program_name):
         elif attack_result[3]:
             logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
             logging.critical(termcolor.colored("[!]: [POSSIBLE DOS ATTACK]: path override with uncacheable error page through: {}".format(attack_result[1]), "yellow"))
-    except:
+    except Exception as e:
+        logging.error(termcolor.colored("[E]: Exception ocurred: " + str(e), "red"))
         pass
     
     try:
@@ -702,7 +703,8 @@ def specific_attacks(url, program_name):
                     ret_val.rdr_permenant_redirect = secondary_attack_result
                     logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
                     logging.critical(termcolor.colored("[!]: [PERMENANT REDIRECT ATTACK]: permenant redirect through: ['{}'] and {}".format(redirect_causing_header, secondary_attack_result[1]), "green"))
-    except:
+    except Exception as e:
+        logging.error(termcolor.colored("[E]: Exception ocurred: " + str(e), "red"))
         pass
 
     try:
@@ -717,7 +719,8 @@ def specific_attacks(url, program_name):
                     ret_val.rdr_permenant_redirect = secondary_attack_result
                     logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
                     logging.critical(termcolor.colored("[!]: [PERMENANT REDIRECT ATTACK]: permenant redirect through: [\"{}\"] and {}".format(redirect_causing_header, secondary_attack_result[1]), "green"))
-    except:
+    except Exception as e:
+        logging.error(termcolor.colored("[E]: Exception ocurred: " + str(e), "red"))
         pass
     
     try:
@@ -726,7 +729,8 @@ def specific_attacks(url, program_name):
             ret_val.rdr_permenant_redirect = attack_result
             logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
             logging.critical(termcolor.colored("[!]: [PERMENANT REDIRECT ATTACK]: permenant redirect through: {}".format(attack_result[1]), "green"))
-    except:
+    except Exception as e:
+        logging.error(termcolor.colored("[E]: Exception ocurred: " + str(e), "red"))
         pass
 
     try:
@@ -735,7 +739,8 @@ def specific_attacks(url, program_name):
         if attack_result[0]:
             logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
             logging.critical(termcolor.colored("[!]: [DOS ATTACK]: method override through: {}".format(attack_result[1]), "green"))
-    except:
+    except Exception as e:
+        logging.error(termcolor.colored("[E]: Exception ocurred: " + str(e), "red"))
         pass
 
     try:
@@ -744,7 +749,8 @@ def specific_attacks(url, program_name):
         if attack_result[0]:
             logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
             logging.critical(termcolor.colored("[!]: [DOS ATTACK]: evil user-agent attack through: {}".format(attack_result[1]), "green"))
-    except:
+    except Exception as e:
+        logging.error(termcolor.colored("[E]: Exception ocurred: " + str(e), "red"))
         pass
 
     try:
@@ -753,7 +759,8 @@ def specific_attacks(url, program_name):
         if attack_result[0]:
             logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
             logging.critical(termcolor.colored("[!]: [DOS/XSS ATTACK]: host override through: {}".format(attack_result[1]), "green"))
-    except:
+    except Exception as e:
+        logging.error(termcolor.colored("[E]: Exception ocurred: " + str(e), "red"))
         pass
 
     try:
@@ -762,7 +769,8 @@ def specific_attacks(url, program_name):
         if attack_result[0]:
             logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
             logging.critical(termcolor.colored("[!]: [DOS ATTACK]: port DoS through: {}".format(attack_result[1]), "green"))
-    except:
+    except Exception as e:
+        logging.error(termcolor.colored("[E]: Exception ocurred: " + str(e), "red"))
         pass
 
     try:
@@ -771,7 +779,8 @@ def specific_attacks(url, program_name):
         if attack_result[0]:
             logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
             logging.critical(termcolor.colored("[!]: [DOS ATTACK]: illegal header attack through: \"{}\"".format(attack_result[1]), "green"))
-    except:
+    except Exception as e:
+        logging.error(termcolor.colored("[E]: Exception ocurred: " + str(e), "red"))
         pass
 
     return ret_val
@@ -814,16 +823,15 @@ def header_bin_search(url, header_list):
             try:
                 response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers=request_headers)
             except:
-                eliminated_indices.append(i)
+                header_group_list[i] = None
                 continue
 
             if (response.status_code != initial_response.status_code) or (canary in response.text) or any(canary in value for value in response.headers.values()):
                 pass
             else:
-                eliminated_indices.append(i)
-
-        for idx in eliminated_indices:
-            header_group_list.pop(idx)
+                header_group_list[i] = None
+        
+        header_group_list = [header_group for header_group in header_group_list if header_group != None]
         
         #now that useless header groups are removed, check if we have any left and split them
         if (len(header_group_list) == 0):
@@ -900,15 +908,18 @@ def assess_header_severity(url, header):
 
     cache_buster = "cache" + gen_rand_str(8)
 
-    initial_response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
-                                                                                                 "accept":"*/*, text/" + cache_buster,
-                                                                                                 "origin":"https://" + cache_buster + ".example.com"})
-    cache_buster = "cache" + gen_rand_str(8)
-    canary = "canary" + gen_rand_str(8)
-    poisoned_response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
-                                                                                            "accept":"*/*, text/" + cache_buster,
-                                                                                            "origin":"https://" + cache_buster + ".example.com",
-                                                                                            header:canary})
+    try:
+        initial_response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                                                                                                     "accept":"*/*, text/" + cache_buster,
+                                                                                                     "origin":"https://" + cache_buster + ".example.com"})
+        cache_buster = "cache" + gen_rand_str(8)
+        canary = "canary" + gen_rand_str(8)
+        poisoned_response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                                                                                                "accept":"*/*, text/" + cache_buster,
+                                                                                                "origin":"https://" + cache_buster + ".example.com",
+                                                                                                header:canary})
+    except:
+        return (is_response_cacheable, is_status_code_changed, new_status_code, is_body_reflected, is_body_unfiltered, is_header_reflected, reflection_header_names)
 
     #check for status code change
     if poisoned_response.status_code != initial_response.status_code:
@@ -926,9 +937,13 @@ def assess_header_severity(url, header):
         is_body_reflected = True
 
     #check for cacheability
-    poisoned_response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
-                                                                                                  "accept":"*/*, text/" + cache_buster,
-                                                                                                  "origin":"https://" + cache_buster + ".example.com"})
+    try:
+        poisoned_response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                                                                                                      "accept":"*/*, text/" + cache_buster,
+                                                                                                      "origin":"https://" + cache_buster + ".example.com"})
+    except:
+        return (is_response_cacheable, is_status_code_changed, new_status_code, is_body_reflected, is_body_unfiltered, is_header_reflected, reflection_header_names)
+
     if is_status_code_changed and poisoned_response.status_code == new_status_code:
         is_response_cacheable = True
     
@@ -970,25 +985,31 @@ def assess_severity(url, program_name, headers, thread_count = 5):
     for i in range(len(header_assessments)):
         msg = "[!]: HEADER REPORT FOR \"{2}\": \"{0}\" On \"{1}\"\n  > ".format(headers[i], url, program_name)
         msg_color = "red"
+
+        #some rate limiting stuff may cause false postives for headers
+        should_print = False
+
         if header_assessments[i][0]:
             msg += "Cacheable Response. "
             msg_color = "green"
         if header_assessments[i][1]:
+            should_print = True
             msg += "HTTP Status Code Modified To {0}. ".format(header_assessments[i][2])
         if header_assessments[i][3]:
+            should_print = True
             msg += "Reflected "
             if header_assessments[i][4]:
                 msg += "Unfiltered "
             msg += "Value in Response Body. "
         if header_assessments[i][5]:
+            should_print = True
             msg += "Reflected Value in Response Headers {0}.".format(header_assessments[i][6])
 
-        if header_assessments[i][0]:
-            logging.critical(termcolor.colored(msg, msg_color))
-        else:
-            logging.warning(termcolor.colored(msg, msg_color))
-        if i == len(header_assessments) - 1:
-            print()
+        if should_print:
+            if header_assessments[i][0]:
+                logging.critical(termcolor.colored(msg, msg_color))
+            else:
+                logging.warning(termcolor.colored(msg, msg_color))
 
     return header_assessments
 

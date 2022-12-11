@@ -134,8 +134,9 @@ def get_urls_from_subdomains(subdomain_list, response_timeout=10.0):
                             seen_subdomains.append(url_obj.host)
     return url_list
 
+
 #get a program name, and test it for cache poisoning
-def test_chaos_program(program, vuln_file_path="", vuln_file_lock=None):
+def test_chaos_program(program, vuln_file=None, vuln_file_lock=None):
     logging.info(termcolor.colored("[i]: Testing Program: {}".format(program["name"]), "blue"))
 
     #get available subdomains
@@ -211,13 +212,13 @@ def test_chaos_program(program, vuln_file_path="", vuln_file_lock=None):
         
             vulns.append(url_vuln)
     
-    vuln_report = {"program_name": program["name"],
-                   "program_url" : program["url"],
-                   "vulns"       : vulns}
+    if len(vulns) > 0:
+        vuln_report = {"program_name": program["name"],
+                       "program_url" : program["url"],
+                       "vulns"       : vulns}
 
-    with vuln_file_lock:
-        with open(vuln_file_path, 'a') as f:
-            f.write(json.dump(vuln_report, indent=4))
+        with vuln_file_lock:
+            vuln_file.write(json.dumps(vuln_report, indent=4) + ",\n")
 
     logging.info(termcolor.colored("[i]: DONE Testing Program: {}".format(program["name"]), "blue"))
 
@@ -238,8 +239,10 @@ def main():
 
     #for program in bounty_program_names:
     vuln_file_lock = threading.Lock()
+    vuln_file = open("vuln_file.txt", 'a')
     with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
-        executor.map(test_chaos_program, bounty_programs, itertools.repeat("vuln_file.txt"), itertools.repeat(vuln_file_lock))
+        executor.map(test_chaos_program, bounty_programs, itertools.repeat(vuln_file), itertools.repeat(vuln_file_lock))
+    vuln_file.close()
 
 
 if __name__ == "__main__":
