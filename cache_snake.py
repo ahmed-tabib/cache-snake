@@ -912,6 +912,7 @@ def assess_header_severity(url, header):
     is_body_unfiltered = False
     is_header_reflected = False
     reflection_header_names = []
+    redirect_location = ""
 
     cache_buster = "cache" + gen_rand_str(8)
 
@@ -926,12 +927,14 @@ def assess_header_severity(url, header):
                                                                                                 "origin":"https://" + cache_buster + ".example.com",
                                                                                                 header:canary})
     except:
-        return (is_response_cacheable, is_status_code_changed, new_status_code, is_body_reflected, is_body_unfiltered, is_header_reflected, reflection_header_names)
+        return (is_response_cacheable, is_status_code_changed, new_status_code, is_body_reflected, is_body_unfiltered, is_header_reflected, reflection_header_names, redirect_location)
 
     #check for status code change
     if poisoned_response.status_code != initial_response.status_code:
         is_status_code_changed = True
         new_status_code = poisoned_response.status_code
+        if poisoned_response.is_redirect and poisoned_response.has_redirect_location:
+            redirect_location = poisoned_response.headers["location"]
     
     #check for response header reflection
     for header_value_pair in poisoned_response.headers.items():
@@ -971,7 +974,7 @@ def assess_header_severity(url, header):
         if canary in poisoned_response.text:
             is_body_unfiltered = True
 
-    return (is_response_cacheable, is_status_code_changed, new_status_code, is_body_reflected, is_body_unfiltered, is_header_reflected, reflection_header_names)
+    return (is_response_cacheable, is_status_code_changed, new_status_code, is_body_reflected, is_body_unfiltered, is_header_reflected, reflection_header_names, redirect_location)
     
 #
 # execute assess_header_severity concurrently and with console output
@@ -1002,6 +1005,8 @@ def assess_severity(url, program_name, headers, thread_count = 5):
         if header_assessments[i][1]:
             should_print = True
             msg += "HTTP Status Code Modified To {0}. ".format(header_assessments[i][2])
+            if header_assessments[i][2] in [301, 302, 303, 307, 308]:
+                msg += "Redirect to : [{0}]".format(header_assessments[i][7])
         if header_assessments[i][3]:
             should_print = True
             msg += "Reflected "
