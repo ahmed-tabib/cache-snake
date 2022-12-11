@@ -399,7 +399,7 @@ def attack_method_override(url, initial_response=None, timeout=20.0):
     
     #if the page does not return a 200 ok there's nothing to do
     if initial_response == None:
-        initial_response = httpx.request("GET", url timeout=timeout,, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+        initial_response = httpx.request("GET", url, timeout=timeout, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                       "accept":"*/*, text/stuff",
                                                       "origin":"https://www.example.com"})
 
