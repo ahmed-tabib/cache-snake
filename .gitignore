@@ -2,4 +2,4 @@
 /chaos_subdomain_dir
 chaos_list_cached
 chaos_list_timestamp
-vuln_file.txt
+vuln_file*.*

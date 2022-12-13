@@ -168,7 +168,7 @@ def test_chaos_program(program, vuln_file=None, vuln_file_lock=None, subdomain_t
     vulns = []
     
     for url in url_list:
-        specific_attacks_result = cache_snake.specific_attacks(url, program["name"])
+        specific_attacks_result = cache_snake.specific_attacks(url, program["name"], timeout=50.0)
         header_bruteforce_result = cache_snake.header_bruteforce(url)
         severity_asessment_result = cache_snake.assess_severity(url, program["name"], header_bruteforce_result)
 
@@ -241,7 +241,7 @@ def main():
 
     if len(sys.argv) == 3:
         vuln_file_name = sys.argv[1]
-        quarter = sys.argv[2]
+        quarter = int(sys.argv[2])
     else:
         vuln_file_name = "vuln_file.json"
         quarter = 0

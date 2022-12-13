@@ -655,7 +655,7 @@ class specific_attack_result:
     dos_host_header_port = (False, [])
     dos_illegal_header = (False, [])
 
-def specific_attacks(url, program_name):
+def specific_attacks(url, program_name, timeout=20.0):
     logging.info(termcolor.colored("[i]: Initiating specific attacks on \"{}\"".format(url), "blue"))
 
     ret_val = specific_attack_result()
@@ -664,7 +664,7 @@ def specific_attacks(url, program_name):
 
     for i in range(4):
         try:
-            initial_response = httpx.request("GET", url, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+            initial_response = httpx.request("GET", url, timeout=timeout, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                   "accept":"*/*, text/stuff",
                                                                   "origin":"https://www.example.com"})
             break
@@ -675,7 +675,7 @@ def specific_attacks(url, program_name):
                 continue
 
     try:
-        attack_result = attack_path_override(url, initial_response)
+        attack_result = attack_path_override(url, timeout=timeout, initial_response)
         ret_val.dos_path_override = attack_result
         if attack_result[0]:
             logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
@@ -691,7 +691,7 @@ def specific_attacks(url, program_name):
         pass
     
     try:
-        attack_result = attack_illegal_header(url, initial_response)
+        attack_result = attack_illegal_header(url, timeout=timeout, initial_response)
         ret_val.dos_illegal_header = attack_result
         if attack_result[0]:
             logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
@@ -701,14 +701,14 @@ def specific_attacks(url, program_name):
         pass
 
     try:
-        attack_result = attack_protocol_override(url, initial_response)
+        attack_result = attack_protocol_override(url, timeout=timeout, initial_response)
         ret_val.dos_proto_override = attack_result
         if attack_result[0]:
             logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
             logging.critical(termcolor.colored("[!]: [DOS ATTACK]: protocol override redirect loop through: {}".format(attack_result[1]), "green"))
             #if we can force a redirect let's see if we can influence it
             for redirect_causing_header in attack_result[1]:
-                secondary_attack_result = attack_permenant_redirect(url, initial_response, 20.0, redirect_causing_header, "http")
+                secondary_attack_result = attack_permenant_redirect(url, timeout=timeout, initial_response, redirect_causing_header, "http")
                 if secondary_attack_result[0]:
                     ret_val.rdr_permenant_redirect = secondary_attack_result
                     logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
@@ -718,13 +718,13 @@ def specific_attacks(url, program_name):
         pass
 
     try:
-        attack_result = attack_port_override(url, initial_response)
+        attack_result = attack_port_override(url, timeout=timeout, initial_response)
         if attack_result[0]:
             logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
             logging.critical(termcolor.colored("[!]: [DOS ATTACK]: port override redirect loop through: {}".format(attack_result[1]), "green"))
             #if we can force a redirect let's see if we can influence it
             for redirect_causing_header in attack_result[1]:
-                secondary_attack_result = attack_permenant_redirect(url, initial_response, 20.0, redirect_causing_header, "80")
+                secondary_attack_result = attack_permenant_redirect(url, timeout=timeout, initial_response, redirect_causing_header, "80")
                 if secondary_attack_result[0]:
                     ret_val.rdr_permenant_redirect = secondary_attack_result
                     logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
@@ -735,7 +735,7 @@ def specific_attacks(url, program_name):
 
     for i in range(4):
         try:
-            initial_response = httpx.request("GET", url, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+            initial_response = httpx.request("GET", url, timeout=timeout, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                   "accept":"*/*, text/stuff",
                                                                   "origin":"https://www.example.com"})
             break
@@ -746,7 +746,7 @@ def specific_attacks(url, program_name):
                 continue
 
     try:
-        attack_result = attack_permenant_redirect(url, initial_response)
+        attack_result = attack_permenant_redirect(url, timeout=timeout, initial_response)
         if attack_result[0]:
             ret_val.rdr_permenant_redirect = attack_result
             logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
@@ -756,7 +756,7 @@ def specific_attacks(url, program_name):
         pass
 
     try:
-        attack_result = attack_host_override(url, initial_response)
+        attack_result = attack_host_override(url, timeout=timeout, initial_response)
         ret_val.xss_host_override = attack_result
         if attack_result[0]:
             logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
@@ -767,7 +767,7 @@ def specific_attacks(url, program_name):
 
 
     try:
-        attack_result = attack_method_override(url, initial_response)
+        attack_result = attack_method_override(url, timeout=timeout, initial_response)
         ret_val.dos_method_override = attack_result
         if attack_result[0]:
             logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
@@ -777,7 +777,7 @@ def specific_attacks(url, program_name):
         pass
 
     try:
-        attack_result = attack_evil_user_agent(url, initial_response)
+        attack_result = attack_evil_user_agent(url, timeout=timeout, initial_response)
         ret_val.dos_evil_user_agent = attack_result
         if attack_result[0]:
             logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
@@ -787,7 +787,7 @@ def specific_attacks(url, program_name):
         pass
 
     try:
-        attack_result = attack_port_dos(url, initial_response)
+        attack_result = attack_port_dos(url, timeout=timeout, initial_response)
         ret_val.dos_host_header_port = attack_result
         if attack_result[0]:
             logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
