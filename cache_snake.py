@@ -691,6 +691,16 @@ def specific_attacks(url, program_name):
         pass
     
     try:
+        attack_result = attack_illegal_header(url, initial_response)
+        ret_val.dos_illegal_header = attack_result
+        if attack_result[0]:
+            logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
+            logging.critical(termcolor.colored("[!]: [DOS ATTACK]: illegal header attack through: \"{}\"".format(attack_result[1]), "green"))
+    except Exception as e:
+        logging.error(termcolor.colored("[E]: Exception ocurred in attack_illegal_header: " + str(e), "red"))
+        pass
+
+    try:
         attack_result = attack_protocol_override(url, initial_response)
         ret_val.dos_proto_override = attack_result
         if attack_result[0]:
@@ -722,7 +732,19 @@ def specific_attacks(url, program_name):
     except Exception as e:
         logging.error(termcolor.colored("[E]: Exception ocurred attack_port_override: " + str(e), "red"))
         pass
-    
+
+    for i in range(4):
+        try:
+            initial_response = httpx.request("GET", url, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                                                                  "accept":"*/*, text/stuff",
+                                                                  "origin":"https://www.example.com"})
+            break
+        except:
+            if i == 3:
+                return ret_val
+            else:
+                continue
+
     try:
         attack_result = attack_permenant_redirect(url, initial_response)
         if attack_result[0]:
@@ -732,6 +754,17 @@ def specific_attacks(url, program_name):
     except Exception as e:
         logging.error(termcolor.colored("[E]: Exception ocurred in attack_permenant_redirect: " + str(e), "red"))
         pass
+
+    try:
+        attack_result = attack_host_override(url, initial_response)
+        ret_val.xss_host_override = attack_result
+        if attack_result[0]:
+            logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
+            logging.critical(termcolor.colored("[!]: [DOS/XSS ATTACK]: host override through: {}".format(attack_result[1]), "green"))
+    except Exception as e:
+        logging.error(termcolor.colored("[E]: Exception ocurred in attack_host_override: " + str(e), "red"))
+        pass
+
 
     try:
         attack_result = attack_method_override(url, initial_response)
@@ -754,16 +787,6 @@ def specific_attacks(url, program_name):
         pass
 
     try:
-        attack_result = attack_host_override(url, initial_response)
-        ret_val.xss_host_override = attack_result
-        if attack_result[0]:
-            logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
-            logging.critical(termcolor.colored("[!]: [DOS/XSS ATTACK]: host override through: {}".format(attack_result[1]), "green"))
-    except Exception as e:
-        logging.error(termcolor.colored("[E]: Exception ocurred in attack_host_override: " + str(e), "red"))
-        pass
-
-    try:
         attack_result = attack_port_dos(url, initial_response)
         ret_val.dos_host_header_port = attack_result
         if attack_result[0]:
@@ -771,16 +794,6 @@ def specific_attacks(url, program_name):
             logging.critical(termcolor.colored("[!]: [DOS ATTACK]: port DoS through: {}".format(attack_result[1]), "green"))
     except Exception as e:
         logging.error(termcolor.colored("[E]: Exception ocurred in attack_port_dos: " + str(e), "red"))
-        pass
-
-    try:
-        attack_result = attack_illegal_header(url, initial_response)
-        ret_val.dos_illegal_header = attack_result
-        if attack_result[0]:
-            logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
-            logging.critical(termcolor.colored("[!]: [DOS ATTACK]: illegal header attack through: \"{}\"".format(attack_result[1]), "green"))
-    except Exception as e:
-        logging.error(termcolor.colored("[E]: Exception ocurred in attack_illegal_header: " + str(e), "red"))
         pass
 
     return ret_val

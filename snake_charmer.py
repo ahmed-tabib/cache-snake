@@ -1,6 +1,7 @@
 import cache_snake
-import os
 import re
+import os
+import sys
 import time
 import json
 import httpx
@@ -136,7 +137,7 @@ def get_urls_from_subdomains(subdomain_list, response_timeout=10.0):
 
 
 #get a program name, and test it for cache poisoning
-def test_chaos_program(program, vuln_file=None, vuln_file_lock=None):
+def test_chaos_program(program, vuln_file=None, vuln_file_lock=None, subdomain_threshold=10000):
     logging.info(termcolor.colored("[i]: Testing Program: {}".format(program["name"]), "blue"))
 
     #get available subdomains
@@ -144,7 +145,10 @@ def test_chaos_program(program, vuln_file=None, vuln_file_lock=None):
     if len(subdomain_list) == 0:
         logging.info(termcolor.colored("[i]: Subdomain list for program \"{}\" is empty.".format(program["name"]), "blue"))
         return
-    logging.info(termcolor.colored("[i]: Found {1} subdomains for {0}.".format(program["name"], len(subdomain_list)), "blue"))
+    logging.info(termcolor.colored("[i]: Found {1} subdomains for \"{0}\".".format(program["name"], len(subdomain_list)), "blue"))
+    if len(subdomain_list) > subdomain_threshold:
+        logging.info(termcolor.colored("[i]: Subdomain count for \"{0}\" surpasses threshold ({1} > {2}).".format(program["name"], len(subdomain_list), subdomain_threshold), "blue"))
+        return
 
     
     #get useful urls
@@ -184,7 +188,7 @@ def test_chaos_program(program, vuln_file=None, vuln_file_lock=None):
         if specific_attacks_result.dos_method_override[0]:
             specific_attacks_json.append({"attack_name": "Method Override DoS", "headers": specific_attacks_result.dos_method_override[1]})
         if specific_attacks_result.dos_evil_user_agent[0]:
-            specific_attacks_json.append({"attack_name": "Method Override DoS", "headers": specific_attacks_result.dos_evil_user_agent[1]})
+            specific_attacks_json.append({"attack_name": "Evil User-agent DoS", "headers": specific_attacks_result.dos_evil_user_agent[1]})
         if specific_attacks_result.xss_host_override[0]:
             specific_attacks_json.append({"attack_name": "Host Override XSS", "headers": specific_attacks_result.xss_host_override[1]})
         if specific_attacks_result.dos_host_header_port[0]:
@@ -235,11 +239,30 @@ def main():
     chaos_list = get_chaos_list()
     bounty_programs = [program for program in chaos_list["programs"] if program["bounty"]]
 
+    if len(sys.argv) == 3:
+        vuln_file_name = sys.argv[1]
+        quarter = sys.argv[2]
+    else:
+        vuln_file_name = "vuln_file.json"
+        quarter = 0
+    
+    i = 0
+    test_programs = [bounty_programs[i:i + len(bounty_programs)//4] for i in range(0, len(bounty_programs), i + len(bounty_programs)//4)]
+
+    if len(test_programs) == 5:
+        test_programs[3] += test_programs[4]
+        test_programs.pop(4)
+
+    if quarter == 0:
+        pass
+    else:
+        bounty_programs = test_programs[quarter-1]
+
     logging.info(termcolor.colored("[i]: Found {} bug bounty programs.".format(len(bounty_programs)), "blue"))
 
     #for program in bounty_program_names:
     vuln_file_lock = threading.Lock()
-    vuln_file = open("vuln_file.txt", 'a')
+    vuln_file = open(vuln_file_name, 'a')
     with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
         executor.map(test_chaos_program, bounty_programs, itertools.repeat(vuln_file), itertools.repeat(vuln_file_lock))
     vuln_file.close()
