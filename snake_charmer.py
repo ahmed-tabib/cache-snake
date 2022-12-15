@@ -99,9 +99,11 @@ def get_urls_from_subdomains(subdomain_list, response_timeout=10.0):
                 #add all previous redirects and current url to list
                 for redirect_response in response.history:
                     if bytes(redirect_response.url.host, 'ascii') in subdomain_list:
-                        url_list.append(str(redirect_response.url))
+                        if str(redirect_response.url) not in url_list:
+                            url_list.append(str(redirect_response.url))
                 if bytes(response.url.host, 'ascii') in subdomain_list:
-                    url_list.append(str(response.url))
+                    if str(response.url).split('?')[0] not in url_list:
+                        url_list.append(str(response.url).split('?')[0])
 
                 #iterate over every script tag, get url, test response, make sure it doesn't already exist and add it to the list
                 script_tags = re.findall("<script[^\\>]*src=[\"']?[^'\" ]*[\"']?", response.text)
@@ -137,7 +139,7 @@ def get_urls_from_subdomains(subdomain_list, response_timeout=10.0):
 
 
 #get a program name, and test it for cache poisoning
-def test_chaos_program(program, vuln_file=None, vuln_file_lock=None, subdomain_threshold=10000):
+def test_chaos_program(program, vuln_file=None, vuln_file_lock=None, max_subdomains=5000, max_urls=50):
     logging.info(termcolor.colored("[i]: Testing Program: {}".format(program["name"]), "blue"))
 
     #get available subdomains
@@ -146,17 +148,37 @@ def test_chaos_program(program, vuln_file=None, vuln_file_lock=None, subdomain_t
         logging.info(termcolor.colored("[i]: Subdomain list for program \"{}\" is empty.".format(program["name"]), "blue"))
         return
     logging.info(termcolor.colored("[i]: Found {1} subdomains for \"{0}\".".format(program["name"], len(subdomain_list)), "blue"))
-    if len(subdomain_list) > subdomain_threshold:
-        logging.info(termcolor.colored("[i]: Subdomain count for \"{0}\" surpasses threshold ({1} > {2}).".format(program["name"], len(subdomain_list), subdomain_threshold), "blue"))
-        return
+    if len(subdomain_list) > max_subdomains:
+        logging.info(termcolor.colored("[i]: Subdomain count for \"{0}\" surpasses threshold ({1} > {2}). Culling.".format(program["name"], len(subdomain_list), max_subdomains), "blue"))
+        
+        eliminated_subdomain_indices = []
+        for i in range(len(subdomain_list)):
+            if "cdn" in str(subdomain_list[i], 'ascii') or "static" in str(subdomain_list[i], 'ascii'):
+                continue
+            if "www" == str(subdomain_list[i], 'ascii').split(".")[0]:
+                continue
+            if len(str(subdomain_list[i], 'ascii').split()) == 3:
+                continue
+            eliminated_subdomain_indices.append(i)
 
-    
+        if len(eliminated_subdomain_indices) < len(subdomain_list) - max_subdomains:
+            subdomain_list = ([subdomain_list[i] for i in range(len(subdomain_list)) if i not in eliminated_subdomain_indices])[:max_subdomains]
+        else:
+            eliminated_subdomain_indices = eliminated_subdomain_indices[:len(subdomain_list) - max_subdomains]
+            subdomain_list = [subdomain_list[i] for i in range(len(subdomain_list)) if i not in eliminated_subdomain_indices]
+
+        logging.info(termcolor.colored("[i]: Subdomain count for \"{0}\" culled to {1}.".format(program["name"], len(subdomain_list)), "blue"))
+
     #get useful urls
     url_list = get_urls_from_subdomains(subdomain_list)
     if len(url_list) == 0:
         logging.info(termcolor.colored("[i]: No URL's found for program \"{}\".".format(program["name"]), "blue"))
         return
     logging.info(termcolor.colored("[i]: Found {1} URL's for {0}.".format(program["name"], len(url_list)), "blue"))
+    
+    if len(url_list) > max_urls:
+        url_list = url_list[:max_urls]
+        logging.info(termcolor.colored("[i]: URL count for \"{0}\" culled to {1}.".format(program["name"], len(url_list)), "blue"))
 
     #
     # attacks are launched sequentially rather than concurrently out of fear
