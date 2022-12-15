@@ -198,7 +198,7 @@ def test_chaos_program(program, max_subdomains=5000, max_urls=50):
         specific_attacks_json = []
         if specific_attacks_result.dos_path_override[0]:
             specific_attacks_json.append({"attack_name": "Path Override DoS", "headers": specific_attacks_result.dos_path_override[1]})
-        if specific_attacks_result.dos_path_override[2]:
+        if specific_attacks_result.dos_path_override[3]:
             specific_attacks_json.append({"attack_name": "Likely Path Override DoS", "headers": specific_attacks_result.dos_path_override[1]})
         if specific_attacks_result.dos_path_override[0]:
             specific_attacks_json.append({"attack_name": "Possible Path Override DoS", "headers": specific_attacks_result.dos_path_override[1]})
@@ -289,10 +289,13 @@ def main():
 
     logging.info(termcolor.colored("[i]: Found {} bug bounty programs.".format(len(bounty_programs)), "blue"))
 
+    backup = cache_snake.setup_illegal_header_attack()
+
     #for program in bounty_program_names:
     with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
         executor.map(test_chaos_program, bounty_programs)
-
+    
+    cache_snake.cleanup_illegal_header_attack()
 
 if __name__ == "__main__":
     main()

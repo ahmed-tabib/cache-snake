@@ -600,10 +600,19 @@ def modified_normalize_and_validate(headers, _parsed=False):
         new_headers.append((raw_name, name, value))
     return Headers(new_headers)
 
-def attack_illegal_header(url, initial_response=None, timeout=20.0):
-    #patch the validation function in httpx to allow illegal headers
+def setup_illegal_header_attack():
     normalize_and_validate_backup = h11._headers.normalize_and_validate
     h11._headers.normalize_and_validate = modified_normalize_and_validate
+    return normalize_and_validate_backup
+
+def cleanup_illegal_header_attack(backup):
+        h11._headers.normalize_and_validate = backup
+
+def attack_illegal_header(url, initial_response=None, timeout=20.0):
+    #patch the validation function in httpx to allow illegal headers
+    #not thread safe, should use thread lock or set it globaly
+    #normalize_and_validate_backup = h11._headers.normalize_and_validate
+    #h11._headers.normalize_and_validate = modified_normalize_and_validate
 
     is_vulnerable = False
     
@@ -636,7 +645,7 @@ def attack_illegal_header(url, initial_response=None, timeout=20.0):
     
 
     #restore the validation function, god knows what I'm breaking with this little stunt
-    h11._headers.normalize_and_validate = normalize_and_validate_backup
+    #h11._headers.normalize_and_validate = normalize_and_validate_backup
     return (is_vulnerable, "]")
 
 #
@@ -680,10 +689,10 @@ def specific_attacks(url, program_name, timeout=20.0):
         if attack_result[0]:
             logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
             logging.critical(termcolor.colored("[!]: [DOS ATTACK]: path override through: {}".format(attack_result[1]), "green"))
-        elif attack_result[2]:
+        elif attack_result[3]:
             logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
             logging.critical(termcolor.colored("[!]: [LIKELY DOS ATTACK]: path override with uncacheable 404 page through: {}".format(attack_result[1]), "green"))
-        elif attack_result[3]:
+        elif attack_result[2]:
             logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
             logging.critical(termcolor.colored("[!]: [POSSIBLE DOS ATTACK]: path override with uncacheable error page through: {}".format(attack_result[1]), "yellow"))
     except Exception as e:
