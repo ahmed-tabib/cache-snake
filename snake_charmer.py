@@ -139,7 +139,7 @@ def get_urls_from_subdomains(subdomain_list, response_timeout=10.0):
 
 
 #get a program name, and test it for cache poisoning
-def test_chaos_program(program, vuln_file=None, vuln_file_lock=None, max_subdomains=5000, max_urls=50):
+def test_chaos_program(program, max_subdomains=5000, max_urls=50):
     logging.info(termcolor.colored("[i]: Testing Program: {}".format(program["name"]), "blue"))
 
     #get available subdomains
@@ -153,6 +153,9 @@ def test_chaos_program(program, vuln_file=None, vuln_file_lock=None, max_subdoma
         
         eliminated_subdomain_indices = []
         for i in range(len(subdomain_list)):
+            if "api" == str(subdomain_list[i], 'ascii').split(".")[0]:
+                eliminated_subdomain_indices.append(i)
+                continue
             if "cdn" in str(subdomain_list[i], 'ascii') or "static" in str(subdomain_list[i], 'ascii'):
                 continue
             if "www" == str(subdomain_list[i], 'ascii').split(".")[0]:
@@ -186,8 +189,6 @@ def test_chaos_program(program, vuln_file=None, vuln_file_lock=None, max_subdoma
     # it's better to have concurrency between programs being tested rather
     # than within them.
     #
-
-    vulns = []
     
     for url in url_list:
         specific_attacks_result = cache_snake.specific_attacks(url, program["name"], timeout=50.0)
@@ -231,20 +232,28 @@ def test_chaos_program(program, vuln_file=None, vuln_file_lock=None, max_subdoma
                                                "reflection_header_names": severity_asessment_result[i][6]})
 
         if len(specific_attacks_json) > 0 or len(header_bruteforce_json) > 0:
+            result_file_name = program["name"].lower().replace(' ', '_') + "_report.json"
+
             url_vuln = {"url": url,
                         "specific_attacks": specific_attacks_json,
                         "header_bruteforce": header_bruteforce_json,
                         "discovered_at": int(time.time())}
-        
-            vulns.append(url_vuln)
-    
-    if len(vulns) > 0:
-        vuln_report = {"program_name": program["name"],
-                       "program_url" : program["url"],
-                       "vulns"       : vulns}
 
-        with vuln_file_lock:
-            vuln_file.write(json.dumps(vuln_report, indent=4) + ",\n")
+            if not (os.path.exists("chaos_result_dir/" + result_file_name)):
+                if not (os.path.exists("chaos_result_dir/")):
+                    os.mkdir("chaos_result_dir")
+                with open("chaos_result_dir/" + result_file_name, 'w') as f:
+                    empty_vuln_report = {"program_name": program["name"],
+                                         "program_url" : program["url"],
+                                         "vulns"       : []}
+                    f.write(json.dumps(empty_vuln_report, indent=4))
+                                
+
+            with open("chaos_result_dir/" + result_file_name, 'r') as f:
+                vuln_report = json.loads(f.read())
+                vuln_report["vulns"].append(url_vuln)
+            with open("chaos_result_dir/" + result_file_name, 'w') as f:
+                f.write(json.dumps(vuln_report, indent=4))
 
     logging.info(termcolor.colored("[i]: DONE Testing Program: {}".format(program["name"]), "blue"))
 
@@ -261,11 +270,9 @@ def main():
     chaos_list = get_chaos_list()
     bounty_programs = [program for program in chaos_list["programs"] if program["bounty"]]
 
-    if len(sys.argv) == 3:
-        vuln_file_name = sys.argv[1]
-        quarter = int(sys.argv[2])
+    if len(sys.argv) == 2:
+        quarter = int(sys.argv[1])
     else:
-        vuln_file_name = "vuln_file.json"
         quarter = 0
     
     i = 0
@@ -283,11 +290,8 @@ def main():
     logging.info(termcolor.colored("[i]: Found {} bug bounty programs.".format(len(bounty_programs)), "blue"))
 
     #for program in bounty_program_names:
-    vuln_file_lock = threading.Lock()
-    vuln_file = open(vuln_file_name, 'a')
     with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
-        executor.map(test_chaos_program, bounty_programs, itertools.repeat(vuln_file), itertools.repeat(vuln_file_lock))
-    vuln_file.close()
+        executor.map(test_chaos_program, bounty_programs)
 
 
 if __name__ == "__main__":

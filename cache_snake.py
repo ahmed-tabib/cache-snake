@@ -701,6 +701,28 @@ def specific_attacks(url, program_name, timeout=20.0):
         pass
 
     try:
+        attack_result = attack_evil_user_agent(url, timeout=timeout, initial_response=initial_response)
+        ret_val.dos_evil_user_agent = attack_result
+        if attack_result[0]:
+            logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
+            logging.critical(termcolor.colored("[!]: [DOS ATTACK]: evil user-agent attack through: {}".format(attack_result[1]), "green"))
+    except Exception as e:
+        logging.error(termcolor.colored("[E]: Exception ocurred attack_evil_user_agent: " + str(e), "red"))
+        pass
+
+    for i in range(4):
+        try:
+            initial_response = httpx.request("GET", url, timeout=timeout, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                                                                  "accept":"*/*, text/stuff",
+                                                                  "origin":"https://www.example.com"})
+            break
+        except:
+            if i == 3:
+                return ret_val
+            else:
+                continue
+
+    try:
         attack_result = attack_protocol_override(url, timeout=timeout, initial_response=initial_response)
         ret_val.dos_proto_override = attack_result
         if attack_result[0]:
@@ -733,6 +755,16 @@ def specific_attacks(url, program_name, timeout=20.0):
         logging.error(termcolor.colored("[E]: Exception ocurred attack_port_override: " + str(e), "red"))
         pass
 
+    try:
+        attack_result = attack_permenant_redirect(url, timeout=timeout, initial_response=initial_response)
+        if attack_result[0]:
+            ret_val.rdr_permenant_redirect = attack_result
+            logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
+            logging.critical(termcolor.colored("[!]: [PERMENANT REDIRECT ATTACK]: permenant redirect through: {}".format(attack_result[1]), "green"))
+    except Exception as e:
+        logging.error(termcolor.colored("[E]: Exception ocurred in attack_permenant_redirect: " + str(e), "red"))
+        pass
+
     for i in range(4):
         try:
             initial_response = httpx.request("GET", url, timeout=timeout, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
@@ -744,16 +776,6 @@ def specific_attacks(url, program_name, timeout=20.0):
                 return ret_val
             else:
                 continue
-
-    try:
-        attack_result = attack_permenant_redirect(url, timeout=timeout, initial_response=initial_response)
-        if attack_result[0]:
-            ret_val.rdr_permenant_redirect = attack_result
-            logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
-            logging.critical(termcolor.colored("[!]: [PERMENANT REDIRECT ATTACK]: permenant redirect through: {}".format(attack_result[1]), "green"))
-    except Exception as e:
-        logging.error(termcolor.colored("[E]: Exception ocurred in attack_permenant_redirect: " + str(e), "red"))
-        pass
 
     try:
         attack_result = attack_host_override(url, timeout=timeout, initial_response=initial_response)
@@ -774,16 +796,6 @@ def specific_attacks(url, program_name, timeout=20.0):
             logging.critical(termcolor.colored("[!]: [DOS ATTACK]: method override through: {}".format(attack_result[1]), "green"))
     except Exception as e:
         logging.error(termcolor.colored("[E]: Exception ocurred in attack_method_override: " + str(e), "red"))
-        pass
-
-    try:
-        attack_result = attack_evil_user_agent(url, timeout=timeout, initial_response=initial_response)
-        ret_val.dos_evil_user_agent = attack_result
-        if attack_result[0]:
-            logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
-            logging.critical(termcolor.colored("[!]: [DOS ATTACK]: evil user-agent attack through: {}".format(attack_result[1]), "green"))
-    except Exception as e:
-        logging.error(termcolor.colored("[E]: Exception ocurred attack_evil_user_agent: " + str(e), "red"))
         pass
 
     try:
