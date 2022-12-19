@@ -835,7 +835,7 @@ def specific_attacks(url, program_name, timeout=20.0):
 # This function recieves a short list of headers and determines which ones cause a response change
 # through a binary search-like algorithm
 #
-def header_bin_search(url, header_list):
+def header_bin_search(url, header_list, ratelimit_pause=5.0):
     #fetch a normal response to compare following responses to it.
     try:
         initial_response = httpx.request("GET", url, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
@@ -851,8 +851,7 @@ def header_bin_search(url, header_list):
     
     while (True):
         #go over every header group, make a request, check the responses, if ordinary, remove from list.
-        eliminated_indices = []
-
+        
         for i in range(len(header_group_list)):
             cache_buster = "cache" + gen_rand_str(8)
             canary = "canary" + gen_rand_str(8)
@@ -879,6 +878,8 @@ def header_bin_search(url, header_list):
                 pass
             else:
                 header_group_list[i] = None
+
+            time.sleep(ratelimit_pause)
         
         header_group_list = [header_group for header_group in header_group_list if header_group != None]
         
@@ -901,10 +902,10 @@ def header_bin_search(url, header_list):
 #
 # Helper function that runs header_bin_search iteratively over a list of header lists
 #
-def header_bin_search_helper(url, header_group_list):
+def header_bin_search_helper(url, header_group_list, ratelimit_pause=5.0):
     retval = []
     for header_group in header_group_list:
-        retval = retval + header_bin_search(url, header_group)
+        retval = retval + header_bin_search(url, header_group, ratelimit_pause=ratelimit_pause)
     return retval
 
 #
@@ -920,7 +921,7 @@ def header_bruteforce(url, header_count=40, thread_count=5):
 
     #execute concurrently
     executor = concurrent.futures.ThreadPoolExecutor()
-    executor_results = executor.map(header_bin_search_helper, itertools.repeat(url), header_group_list_list)
+    executor_results = executor.map(header_bin_search_helper, itertools.repeat(url), header_group_list_list, itertools.repeat(3.0))
     retval = []
     for header_list in list(executor_results):
         retval = retval + header_list
