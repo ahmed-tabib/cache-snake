@@ -294,6 +294,8 @@ def attack_path_override(url, initial_response=None, timeout=20.0):
                                                                                             header:"/404" + gen_rand_str(16)})
         #if we get a non 200 response code, we remove the header and resend the request
         if response.status_code != 200 and response.status_code != 429:
+            poisoned_response_status = response.status_code
+
             time.sleep(0.5)
 
             is_possible = True
@@ -305,7 +307,7 @@ def attack_path_override(url, initial_response=None, timeout=20.0):
             response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com"})
-            if response.status_code != 200 and response.status_code != 429:
+            if response.status_code == poisoned_response_status:
                 is_vulnerable = True
     
     return (is_vulnerable, exploitable_headers, is_possible, is_probable)
@@ -380,11 +382,13 @@ def attack_port_override(url, initial_response=None, timeout=20.0):
                                                                                             header:"80"})
         #if we get a non 200 response code, we remove the header and resend the request
         if response.status_code != 200 and response.status_code != 429:
+            poisoned_response_status = response.status_code
+
             time.sleep(0.5)
             response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com"})
-            if response.status_code != 200 and response.status_code != 429:
+            if response.status_code == poisoned_response_status:
                 exploitable_headers.append(header)
                 is_vulnerable = True
     
@@ -495,11 +499,13 @@ def attack_evil_user_agent(url, initial_response=None, timeout=20.0):
                                                                                             "origin":"https://" + cache_buster + ".example.com"})
         #if we get a 403, repeat to see if cached
         if response.status_code != 200 and response.status_code != 429:
+            poisoned_response_status = response.status_code
+
             time.sleep(0.5)
             response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                             "accept":"*/*, text/" + cache_buster,
                                                                                             "origin":"https://" + cache_buster + ".example.com"})
-            if response.status_code != 200 and response.status_code != 429:
+            if response.status_code == poisoned_response_status:
                 exploitable_values.append(value)
                 is_vulnerable = True
     
@@ -905,7 +911,7 @@ def header_bin_search_helper(url, header_group_list):
 # This function divides the large header list into manageable chunks and 
 # uses multithreading to test all of them on a target
 #
-def header_bruteforce(url, header_count=15, thread_count=5):
+def header_bruteforce(url, header_count=30, thread_count=5):
     logging.info(termcolor.colored("[i]: Initiating header bruteforce on \"{}\"".format(url), "blue"))
     #fetching headers and splitting them into header_count long chunks, and then again into thread_count chuncks
     headers = open("lists/headers.txt", "r").read().splitlines()
