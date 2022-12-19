@@ -911,7 +911,7 @@ def header_bin_search_helper(url, header_group_list):
 # This function divides the large header list into manageable chunks and 
 # uses multithreading to test all of them on a target
 #
-def header_bruteforce(url, header_count=30, thread_count=5):
+def header_bruteforce(url, header_count=40, thread_count=5):
     logging.info(termcolor.colored("[i]: Initiating header bruteforce on \"{}\"".format(url), "blue"))
     #fetching headers and splitting them into header_count long chunks, and then again into thread_count chuncks
     headers = open("lists/headers.txt", "r").read().splitlines()
