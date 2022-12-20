@@ -701,7 +701,7 @@ def specific_attacks(url, program_name, timeout=20.0):
             logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
             logging.critical(termcolor.colored("[!]: [LIKELY DOS ATTACK]: path override with uncacheable 404 page through: {}".format(attack_result[1]), "green"))
         elif attack_result[2]:
-            logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
+            logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "yellow"))
             logging.critical(termcolor.colored("[!]: [POSSIBLE DOS ATTACK]: path override with uncacheable error page through: {}".format(attack_result[1]), "yellow"))
     except Exception as e:
         logging.error(termcolor.colored("[E]: Exception ocurred in attack_path_override: " + str(e), "red"))
@@ -1072,7 +1072,7 @@ def assess_severity(url, program_name, headers, thread_count = 5):
 #print_banner()
 
 #test
-bckp = setup_illegal_header_attack()
-specific_attacks("https://mick1990.tweakblogs.net", "Binary")
-cleanup_illegal_header_attack(bckp)
+#bckp = setup_illegal_header_attack()
+#specific_attacks("https://mick1990.tweakblogs.net", "Binary")
+#cleanup_illegal_header_attack(bckp)
 #assess_severity("https://assets.finn.no/pkg/frontpage-podium/2.0.70/scripts.js", header_bruteforce("https://assets.finn.no/pkg/frontpage-podium/2.0.70/scripts.js"))
