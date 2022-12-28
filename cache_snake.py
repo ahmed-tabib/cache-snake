@@ -274,6 +274,7 @@ def attack_path_override(url, initial_response=None, timeout=20.0):
 
     #if the page does not return a 200 ok there's nothing to do
     if initial_response == None:
+        cache_buster = "cache" + gen_rand_str(8)
         response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                                               "accept":"*/*, text/" + cache_buster,
                                                                                                               "origin":"https://" + cache_buster + ".example.com",})
@@ -322,6 +323,7 @@ def attack_protocol_override(url, initial_response=None, timeout=20.0):
     
     #if the page does not return a 200 ok there's nothing to do
     if initial_response == None:
+        cache_buster = "cache" + gen_rand_str(8)
         response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                                               "accept":"*/*, text/" + cache_buster,
                                                                                                               "origin":"https://" + cache_buster + ".example.com",})
@@ -362,6 +364,7 @@ def attack_port_override(url, initial_response=None, timeout=20.0):
     
     #if the page does not return a 200 ok there's nothing to do
     if initial_response == None:
+        cache_buster = "cache" + gen_rand_str(8)
         response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                                               "accept":"*/*, text/" + cache_buster,
                                                                                                               "origin":"https://" + cache_buster + ".example.com",})
@@ -403,6 +406,7 @@ def attack_method_override(url, initial_response=None, timeout=20.0):
     
     #if the page does not return a 200 ok there's nothing to do
     if initial_response == None:
+        cache_buster = "cache" + gen_rand_str(8)
         initial_response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                                               "accept":"*/*, text/" + cache_buster,
                                                                                                               "origin":"https://" + cache_buster + ".example.com",})
@@ -480,6 +484,7 @@ def attack_evil_user_agent(url, initial_response=None, timeout=20.0):
     
     #if the page does not return a 200 ok there's nothing to do
     if initial_response == None:
+        cache_buster = "cache" + gen_rand_str(8)
         response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                                               "accept":"*/*, text/" + cache_buster,
                                                                                                               "origin":"https://" + cache_buster + ".example.com",})
@@ -520,6 +525,7 @@ def attack_host_override(url, initial_response=None, timeout=20.0):
     
     #if the page does not return a 200 ok there's nothing to do
     if initial_response == None:
+        cache_buster = "cache" + gen_rand_str(8)
         response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                                               "accept":"*/*, text/" + cache_buster,
                                                                                                               "origin":"https://" + cache_buster + ".example.com",})
@@ -559,6 +565,7 @@ def attack_port_dos(url, initial_response=None, timeout=20.0):
     
     #if the response is not a redirect there's nothing to do
     if initial_response == None:
+        cache_buster = "cache" + gen_rand_str(8)
         initial_response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                                               "accept":"*/*, text/" + cache_buster,
                                                                                                               "origin":"https://" + cache_buster + ".example.com",})
@@ -624,6 +631,7 @@ def attack_illegal_header(url, initial_response=None, timeout=20.0):
     
     #if the page does not return a 200 ok/redirect there's nothing to do
     if initial_response == None:
+        cache_buster = "cache" + gen_rand_str(8)
         response = httpx.request("GET", url, timeout=timeout, params={"cache-buster": cache_buster}, headers={"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
                                                                                                               "accept":"*/*, text/" + cache_buster,
                                                                                                               "origin":"https://" + cache_buster + ".example.com",})
@@ -1072,7 +1080,5 @@ def assess_severity(url, program_name, headers, thread_count = 5):
 #print_banner()
 
 #test
-#bckp = setup_illegal_header_attack()
-#specific_attacks("https://mick1990.tweakblogs.net", "Binary")
-#cleanup_illegal_header_attack(bckp)
-#assess_severity("https://assets.finn.no/pkg/frontpage-podium/2.0.70/scripts.js", header_bruteforce("https://assets.finn.no/pkg/frontpage-podium/2.0.70/scripts.js"))
+#a = attack_evil_user_agent("https://experience.dropbox.com")
+#print(a)
