@@ -720,6 +720,7 @@ class specific_attack_result:
     xss_host_override = (False, [])
     dos_host_header_port = (False, [])
     dos_illegal_header = (False, [])
+    dos_large_header_count = (False, [])
 
 def specific_attacks(url, program_name, timeout=20.0):
     logging.info(termcolor.colored("[i]: Initiating specific attacks on \"{}\"".format(url), "blue"))
@@ -741,6 +742,16 @@ def specific_attacks(url, program_name, timeout=20.0):
                 return ret_val
             else:
                 continue
+    
+    try:
+        attack_result = attack_large_header_count(url, timeout=timeout, initial_response=initial_response)
+        ret_val.dos_large_header_count = attack_result
+        if attack_result[0]:
+            logging.critical(termcolor.colored("[!]: ATTACK REPORT FOR \"{}\" ON: \"{}\"".format(program_name, url), "green"))
+            logging.critical(termcolor.colored("[!]: [DOS ATTACK]: illegal header count attack (130).", "green"))
+    except Exception as e:
+        logging.error(termcolor.colored("[E]: Exception ocurred in attack_large_header_count: " + str(e), "red"))
+        pass
 
     try:
         attack_result = attack_path_override(url, timeout=timeout, initial_response=initial_response)

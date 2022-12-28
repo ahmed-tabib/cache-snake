@@ -146,6 +146,69 @@ def get_urls_from_subdomains(subdomain_list, response_timeout=10.0):
     return url_list
 
 
+#save a vulnerability to a file
+def save_vuln_to_file(header_bruteforce_result, severity_assessment_result, specific_attacks_result, url, program, dir_name, file_name):
+    specific_attacks_json = []
+    if specific_attacks_result.dos_path_override[0]:
+        specific_attacks_json.append({"attack_name": "Path Override DoS", "headers": specific_attacks_result.dos_path_override[1]})
+    if specific_attacks_result.dos_large_header_count[0]:
+        specific_attacks_json.append({"attack_name": "Illegal Header Count DoS", "headers": ["x-random-header"]})
+    if specific_attacks_result.dos_path_override[3]:
+        specific_attacks_json.append({"attack_name": "Likely Path Override DoS", "headers": specific_attacks_result.dos_path_override[1]})
+    if specific_attacks_result.dos_path_override[0]:
+        specific_attacks_json.append({"attack_name": "Possible Path Override DoS", "headers": specific_attacks_result.dos_path_override[1]})
+    if specific_attacks_result.dos_proto_override[0]:
+        specific_attacks_json.append({"attack_name": "Protocol Override DoS", "headers": specific_attacks_result.dos_proto_override[1]})
+    if specific_attacks_result.rdr_permenant_redirect[0]:
+        specific_attacks_json.append({"attack_name": "Permenant Redirect", "headers": specific_attacks_result.rdr_permenant_redirect[1]})
+    if specific_attacks_result.dos_port_override[0]:
+        specific_attacks_json.append({"attack_name": "Port Override DoS", "headers": specific_attacks_result.dos_port_override[1]})
+    if specific_attacks_result.dos_method_override[0]:
+        specific_attacks_json.append({"attack_name": "Method Override DoS", "headers": specific_attacks_result.dos_method_override[1]})
+    if specific_attacks_result.dos_evil_user_agent[0]:
+        specific_attacks_json.append({"attack_name": "Evil User-agent DoS", "headers": specific_attacks_result.dos_evil_user_agent[1]})
+    if specific_attacks_result.xss_host_override[0]:
+        specific_attacks_json.append({"attack_name": "Host Override XSS", "headers": specific_attacks_result.xss_host_override[1]})
+    if specific_attacks_result.dos_host_header_port[0]:
+        specific_attacks_json.append({"attack_name": "Host Header Port DoS", "headers": specific_attacks_result.dos_host_header_port[1]})
+    if specific_attacks_result.dos_illegal_header[0]:
+        specific_attacks_json.append({"attack_name": "Illegal Header DoS", "headers": specific_attacks_result.dos_illegal_header[1]})
+        
+    header_bruteforce_json = []
+    for i in range(len(header_bruteforce_result)):
+        if severity_assessment_result[i][0] and (severity_assessment_result[i][1] or severity_assessment_result[i][3] or severity_assessment_result[i][5]):
+            header_bruteforce_json.append({"header_name": header_bruteforce_result[i],
+                                           "is_cacheable": severity_assessment_result[i][0],
+                                           "is_status_code_changed": severity_assessment_result[i][1],
+                                           "new_status_code": severity_assessment_result[i][2],
+                                           "is_body_reflected": severity_assessment_result[i][3],
+                                           "is_body_unfiltered": severity_assessment_result[i][4],
+                                           "is_header_reflected": severity_assessment_result[i][5],
+                                           "reflection_header_names": severity_assessment_result[i][6]})
+
+    if len(specific_attacks_json) > 0 or len(header_bruteforce_json) > 0:
+        url_vuln = {"url": url,
+                    "specific_attacks": specific_attacks_json,
+                    "header_bruteforce": header_bruteforce_json,
+                    "discovered_at": int(time.time())}
+
+        if not (os.path.exists(dir_name + "/" + file_name)):
+            if not (os.path.exists(dir_name + "/")):
+                os.mkdir(dir_name)
+            with open(dir_name + "/" + file_name, 'w') as f:
+                empty_vuln_report = {"program_name": program["name"],
+                                     "program_url" : program["url"],
+                                     "vulns"       : []}
+                f.write(json.dumps(empty_vuln_report, indent=4))
+                            
+
+        with open(dir_name + "/" + file_name, 'r') as f:
+            vuln_report = json.loads(f.read())
+            vuln_report["vulns"].append(url_vuln)
+        with open(dir_name + "/" + file_name, 'w') as f:
+            f.write(json.dumps(vuln_report, indent=4))
+
+
 #get a program name, and test it for cache poisoning
 def test_chaos_program(program, max_subdomains=5000, max_urls=50, output_dir="chaos_result_dir"):
     logging.info(termcolor.colored("[i]: Testing Program: {}".format(program["name"]), "blue"))
@@ -201,67 +264,9 @@ def test_chaos_program(program, max_subdomains=5000, max_urls=50, output_dir="ch
     for url in url_list:
         specific_attacks_result = cache_snake.specific_attacks(url, program["name"], timeout=50.0)
         header_bruteforce_result = cache_snake.header_bruteforce(url)
-        severity_asessment_result = cache_snake.assess_severity(url, program["name"], header_bruteforce_result)
+        severity_assessment_result = cache_snake.assess_severity(url, program["name"], header_bruteforce_result)
 
-        specific_attacks_json = []
-        if specific_attacks_result.dos_path_override[0]:
-            specific_attacks_json.append({"attack_name": "Path Override DoS", "headers": specific_attacks_result.dos_path_override[1]})
-        if specific_attacks_result.dos_path_override[3]:
-            specific_attacks_json.append({"attack_name": "Likely Path Override DoS", "headers": specific_attacks_result.dos_path_override[1]})
-        if specific_attacks_result.dos_path_override[0]:
-            specific_attacks_json.append({"attack_name": "Possible Path Override DoS", "headers": specific_attacks_result.dos_path_override[1]})
-        if specific_attacks_result.dos_proto_override[0]:
-            specific_attacks_json.append({"attack_name": "Protocol Override DoS", "headers": specific_attacks_result.dos_proto_override[1]})
-        if specific_attacks_result.rdr_permenant_redirect[0]:
-            specific_attacks_json.append({"attack_name": "Permenant Redirect", "headers": specific_attacks_result.rdr_permenant_redirect[1]})
-        if specific_attacks_result.dos_port_override[0]:
-            specific_attacks_json.append({"attack_name": "Port Override DoS", "headers": specific_attacks_result.dos_port_override[1]})
-        if specific_attacks_result.dos_method_override[0]:
-            specific_attacks_json.append({"attack_name": "Method Override DoS", "headers": specific_attacks_result.dos_method_override[1]})
-        if specific_attacks_result.dos_evil_user_agent[0]:
-            specific_attacks_json.append({"attack_name": "Evil User-agent DoS", "headers": specific_attacks_result.dos_evil_user_agent[1]})
-        if specific_attacks_result.xss_host_override[0]:
-            specific_attacks_json.append({"attack_name": "Host Override XSS", "headers": specific_attacks_result.xss_host_override[1]})
-        if specific_attacks_result.dos_host_header_port[0]:
-            specific_attacks_json.append({"attack_name": "Host Header Port DoS", "headers": specific_attacks_result.dos_host_header_port[1]})
-        if specific_attacks_result.dos_illegal_header[0]:
-            specific_attacks_json.append({"attack_name": "Illegal Header DoS", "headers": specific_attacks_result.dos_illegal_header[1]})
-            
-        header_bruteforce_json = []
-        for i in range(len(header_bruteforce_result)):
-            if severity_asessment_result[i][0] and (severity_asessment_result[i][1] or severity_asessment_result[i][3] or severity_asessment_result[i][5]):
-                header_bruteforce_json.append({"header_name": header_bruteforce_result[i],
-                                               "is_cacheable": severity_asessment_result[i][0],
-                                               "is_status_code_changed": severity_asessment_result[i][1],
-                                               "new_status_code": severity_asessment_result[i][2],
-                                               "is_body_reflected": severity_asessment_result[i][3],
-                                               "is_body_unfiltered": severity_asessment_result[i][4],
-                                               "is_header_reflected": severity_asessment_result[i][5],
-                                               "reflection_header_names": severity_asessment_result[i][6]})
-
-        if len(specific_attacks_json) > 0 or len(header_bruteforce_json) > 0:
-            result_file_name = program["name"].lower().replace(' ', '_') + "_report.json"
-
-            url_vuln = {"url": url,
-                        "specific_attacks": specific_attacks_json,
-                        "header_bruteforce": header_bruteforce_json,
-                        "discovered_at": int(time.time())}
-
-            if not (os.path.exists(output_dir + "/" + result_file_name)):
-                if not (os.path.exists(output_dir + "/")):
-                    os.mkdir(output_dir)
-                with open(output_dir + "/" + result_file_name, 'w') as f:
-                    empty_vuln_report = {"program_name": program["name"],
-                                         "program_url" : program["url"],
-                                         "vulns"       : []}
-                    f.write(json.dumps(empty_vuln_report, indent=4))
-                                
-
-            with open(output_dir + "/" + result_file_name, 'r') as f:
-                vuln_report = json.loads(f.read())
-                vuln_report["vulns"].append(url_vuln)
-            with open(output_dir + "/" + result_file_name, 'w') as f:
-                f.write(json.dumps(vuln_report, indent=4))
+        save_vuln_to_file(header_bruteforce_result, severity_assessment_result, specific_attacks_result, url, program, "chaos_result_dir", program["name"].lower().replace(" ", "_") + "_result.json")
 
     logging.info(termcolor.colored("[i]: DONE Testing Program: {}".format(program["name"]), "blue"))
 
@@ -292,67 +297,9 @@ def test_normal_program(program, max_urls=100, output_dir="normal_result_dir"):
     for url in url_list:
         specific_attacks_result = cache_snake.specific_attacks(url, program["name"], timeout=50.0)
         header_bruteforce_result = cache_snake.header_bruteforce(url)
-        severity_asessment_result = cache_snake.assess_severity(url, program["name"], header_bruteforce_result)
+        severity_assessment_result = cache_snake.assess_severity(url, program["name"], header_bruteforce_result)
 
-        specific_attacks_json = []
-        if specific_attacks_result.dos_path_override[0]:
-            specific_attacks_json.append({"attack_name": "Path Override DoS", "headers": specific_attacks_result.dos_path_override[1]})
-        if specific_attacks_result.dos_path_override[3]:
-            specific_attacks_json.append({"attack_name": "Likely Path Override DoS", "headers": specific_attacks_result.dos_path_override[1]})
-        if specific_attacks_result.dos_path_override[0]:
-            specific_attacks_json.append({"attack_name": "Possible Path Override DoS", "headers": specific_attacks_result.dos_path_override[1]})
-        if specific_attacks_result.dos_proto_override[0]:
-            specific_attacks_json.append({"attack_name": "Protocol Override DoS", "headers": specific_attacks_result.dos_proto_override[1]})
-        if specific_attacks_result.rdr_permenant_redirect[0]:
-            specific_attacks_json.append({"attack_name": "Permenant Redirect", "headers": specific_attacks_result.rdr_permenant_redirect[1]})
-        if specific_attacks_result.dos_port_override[0]:
-            specific_attacks_json.append({"attack_name": "Port Override DoS", "headers": specific_attacks_result.dos_port_override[1]})
-        if specific_attacks_result.dos_method_override[0]:
-            specific_attacks_json.append({"attack_name": "Method Override DoS", "headers": specific_attacks_result.dos_method_override[1]})
-        if specific_attacks_result.dos_evil_user_agent[0]:
-            specific_attacks_json.append({"attack_name": "Evil User-agent DoS", "headers": specific_attacks_result.dos_evil_user_agent[1]})
-        if specific_attacks_result.xss_host_override[0]:
-            specific_attacks_json.append({"attack_name": "Host Override XSS", "headers": specific_attacks_result.xss_host_override[1]})
-        if specific_attacks_result.dos_host_header_port[0]:
-            specific_attacks_json.append({"attack_name": "Host Header Port DoS", "headers": specific_attacks_result.dos_host_header_port[1]})
-        if specific_attacks_result.dos_illegal_header[0]:
-            specific_attacks_json.append({"attack_name": "Illegal Header DoS", "headers": specific_attacks_result.dos_illegal_header[1]})
-            
-        header_bruteforce_json = []
-        for i in range(len(header_bruteforce_result)):
-            if severity_asessment_result[i][0] and (severity_asessment_result[i][1] or severity_asessment_result[i][3] or severity_asessment_result[i][5]):
-                header_bruteforce_json.append({"header_name": header_bruteforce_result[i],
-                                               "is_cacheable": severity_asessment_result[i][0],
-                                               "is_status_code_changed": severity_asessment_result[i][1],
-                                               "new_status_code": severity_asessment_result[i][2],
-                                               "is_body_reflected": severity_asessment_result[i][3],
-                                               "is_body_unfiltered": severity_asessment_result[i][4],
-                                               "is_header_reflected": severity_asessment_result[i][5],
-                                               "reflection_header_names": severity_asessment_result[i][6]})
-
-        if len(specific_attacks_json) > 0 or len(header_bruteforce_json) > 0:
-            result_file_name = program["name"].lower().replace(' ', '_') + "_report.json"
-
-            url_vuln = {"url": url,
-                        "specific_attacks": specific_attacks_json,
-                        "header_bruteforce": header_bruteforce_json,
-                        "discovered_at": int(time.time())}
-
-            if not (os.path.exists(output_dir + "/" + result_file_name)):
-                if not (os.path.exists(output_dir + "/")):
-                    os.mkdir(output_dir)
-                with open(output_dir + "/" + result_file_name, 'w') as f:
-                    empty_vuln_report = {"program_name": program["name"],
-                                         "program_url" : program["url"],
-                                         "vulns"       : []}
-                    f.write(json.dumps(empty_vuln_report, indent=4))
-                                
-
-            with open(output_dir + "/" + result_file_name, 'r') as f:
-                vuln_report = json.loads(f.read())
-                vuln_report["vulns"].append(url_vuln)
-            with open(output_dir + "/" + result_file_name, 'w') as f:
-                f.write(json.dumps(vuln_report, indent=4))
+        save_vuln_to_file(header_bruteforce_result, severity_assessment_result, specific_attacks_result, url, program, "chaos_result_dir", program["name"].lower().replace(" ", "_") + "_result.json")
 
     logging.info(termcolor.colored("[i]: DONE Testing Program: {}".format(program["name"]), "blue"))
 
