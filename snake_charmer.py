@@ -315,8 +315,8 @@ def main():
         chaos_list = get_chaos_list()
         bounty_programs = [program for program in chaos_list["programs"] if program["bounty"]]
 
-        if len(sys.argv) == 2:
-            quarter = int(sys.argv[1])
+        if len(sys.argv) == 3:
+            quarter = int(sys.argv[2])
         else:
             quarter = 0
         
@@ -373,6 +373,15 @@ def main():
         return
     
     elif sys.argv[1] == "url":
+
+        backup = cache_snake.setup_illegal_header_attack()
+        
+        program = {"name": "program", "domains": ["*."+sys.argv[2], sys.argv[2]]}
+
+        test_normal_program(program, 100)
+
+        cache_snake.cleanup_illegal_header_attack(backup)
+
         return
     
     else:
